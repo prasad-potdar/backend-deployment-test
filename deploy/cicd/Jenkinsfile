@@ -52,7 +52,7 @@ pipeline {
 
                     // Replace image tag in YAML and deploy to K8s
                     sh """
-                    if [[ "$OSTYPE" == "darwin"* ]]; then
+                    if uname | grep -q 'Darwin'; then
                         sed -i '' 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
                     else
                         sed -i 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
