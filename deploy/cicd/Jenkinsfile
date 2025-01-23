@@ -1,0 +1,85 @@
+pipeline {
+    agent { label env.DEPLOYMENT_ENV }
+
+    environment {
+        GIT_REPO_URL = 'https://github.com/prasad-potdar/backend-deployment-test.git'
+        GIT_BRANCH = 'main'  // Change this to read from Jenkins environment or pass dynamically
+        IMAGE_NAME = 'backend-deployment-test'
+        REGISTRY_HOST = 'prasadmpotdar'
+        FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
+        DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
+        K8S_NAMESPACE = 'default'  // Change if you want to deploy to a different namespace
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                script {
+                    echo "Cloning repository: ${GIT_REPO_URL} (branch: ${GIT_BRANCH})"
+                    checkout scm: [$class: 'GitSCM', 
+                        branches: [[name: "*/${GIT_BRANCH}"]],
+                        userRemoteConfigs: [[url: GIT_REPO_URL]]
+                    ]
+                }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'docker-hub-access-token', variable: 'DOCKER_ACCESS_TOKEN')]) {
+                        echo "Logging into Docker Hub..."
+                        sh """
+                        echo $DOCKER_ACCESS_TOKEN | docker login -u $REGISTRY_HOST --password-stdin
+                        """
+
+                        echo "Building and pushing Docker image..."
+                        sh """
+                        docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deployment/Dockerfile .
+                        docker tag ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} ${FULL_IMAGE_NAME}:latest
+                        docker push ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}
+                        docker push ${FULL_IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Deploying to Kubernetes in namespace: ${K8S_NAMESPACE}"
+
+                    // Replace image tag in YAML and deploy to K8s
+                    sh """
+                    sed -i 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deployment/k8s/deployment.yaml
+                    kubectl apply -n ${K8S_NAMESPACE} -f deployment/k8s/deployment.yaml
+                    kubectl apply -n ${K8S_NAMESPACE} -f deployment/k8s/service.yaml
+                    """
+
+                    // Verify deployment rollout
+                    sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "Docker Image successfully pushed to: ${DOCKER_REPO_URL}"
+            echo "Deployment completed successfully!"
+        }
+        failure {
+            echo "Deployment failed! Please check the logs."
+        }
+        unstable {
+            echo "Deployment encountered issues but completed."
+        }
+        changed {
+            echo "The deployment state has changed."
+        }
+    }
+}
