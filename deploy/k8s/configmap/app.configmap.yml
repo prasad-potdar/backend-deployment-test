@@ -4,6 +4,6 @@ metadata:
     name: backend-config
 data:
   #deployment
-  PORT: "${PORT}"
-  SERVICE_NAME: "${SERVICE_NAME}"
-  NODE_ENV: "${NODE_ENV}"
+  PORT: "3001"
+  SERVICE_NAME: "backend-deployment-test"
+  NODE_ENV: "development"
