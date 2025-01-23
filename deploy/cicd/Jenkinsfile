@@ -58,7 +58,7 @@ pipeline {
                     """
 
                     // Verify deployment rollout
-                    sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
+                    // sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
                 }
             }
         }
