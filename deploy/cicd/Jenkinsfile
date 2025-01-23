@@ -35,7 +35,7 @@ pipeline {
 
                         echo "Building and pushing Docker image..."
                         sh """
-                        docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deployment/Dockerfile .
+                        docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .
                         docker tag ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} ${FULL_IMAGE_NAME}:latest
                         docker push ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}
                         docker push ${FULL_IMAGE_NAME}:latest
