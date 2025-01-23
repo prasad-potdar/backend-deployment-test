@@ -52,9 +52,9 @@ pipeline {
 
                     // Replace image tag in YAML and deploy to K8s
                     sh """
-                    sed -i 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deployment/k8s/deployment.yaml
-                    kubectl apply -n ${K8S_NAMESPACE} -f deployment/k8s/deployment.yaml
-                    kubectl apply -n ${K8S_NAMESPACE} -f deployment/k8s/service.yaml
+                    sed -i 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yaml
+                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yaml
+                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yaml
                     """
 
                     // Verify deployment rollout
