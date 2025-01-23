@@ -16,4 +16,4 @@ spec:
               service:
                 name: backend-deployment-test-service
                 port:
-                  number: 3001
+                  number: 80
