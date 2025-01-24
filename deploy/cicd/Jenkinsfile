@@ -84,51 +84,39 @@
 //         }
 //     }
 // }
-
 pipeline {
-    agent { label env.DEPLOYMENT_ENV }
+    agent any
 
     environment {
-        GIT_REPO_URL = 'https://github.com/prasad-potdar/backend-deployment-test.git'
-        GIT_BRANCH = 'main'  // You can set dynamically via Jenkins params
-        IMAGE_NAME = 'backend-deployment-test'
-        REGISTRY_HOST = 'prasadmpotdar'
-        FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
-        DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
-        K8S_NAMESPACE = 'default'  // Change if deploying to another namespace
-        INGRESS_HOST = 'backend.local'  // Define your ingress host
+        DOCKER_IMAGE = 'backend-deployment-test'
+        MINIKUBE_IP = sh(script: "minikube ip", returnStdout: true).trim()
+        K8S_NAMESPACE = 'default'  // You can change this to your desired namespace
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Cloning repository: ${GIT_REPO_URL} (branch: ${GIT_BRANCH})"
-                    checkout scm: [$class: 'GitSCM', 
-                        branches: [[name: "*/${GIT_BRANCH}"]],
-                        userRemoteConfigs: [[url: GIT_REPO_URL]]
-                    ]
+                    echo 'Building Docker image...'
+                    sh 'docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .'
                 }
             }
         }
 
-        stage('Build and Push Docker Image') {
+        stage('Set Up Minikube Docker Env') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'docker-hub-access-token', variable: 'DOCKER_ACCESS_TOKEN')]) {
-                        echo "Logging into Docker Hub..."
-                        sh """
-                        echo $DOCKER_ACCESS_TOKEN | docker login -u $REGISTRY_HOST --password-stdin
-                        """
+                    echo 'Setting up Minikube Docker environment...'
+                    sh 'eval $(minikube -p minikube docker-env)'
+                }
+            }
+        }
 
-                        echo "Building and pushing Docker image..."
-                        sh """
-                        docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .
-                        docker tag ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} ${FULL_IMAGE_NAME}:latest
-                        docker push ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}
-                        docker push ${FULL_IMAGE_NAME}:latest
-                        """
-                    }
+        stage('Push Docker Image to Minikube') {
+            steps {
+                script {
+                    echo 'Pushing Docker image to Minikube...'
+                    sh 'docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER}  -f deploy/docker/microservice.Dockerfile .'
                 }
             }
         }
@@ -136,42 +124,24 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    echo "Deploying to Kubernetes in namespace: ${K8S_NAMESPACE}"
-
-                    // Update the deployment YAML with the correct image tag
+                    echo 'Applying Kubernetes deployment...'
                     sh """
-                    sed -i '' 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
-                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
-                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
-                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yml
-                    """
-
-                    // Verify rollout status
-                    sh "kubectl rollout status deployment/${IMAGE_NAME} -n ${K8S_NAMESPACE}"
-                }
-            }
-        }
-
-        stage('Deploy Ingress') {
-            steps {
-                script {
-                    echo "Applying Ingress resource..."
-                    sh """
-                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
+                        kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
+                        kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
+                        kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
                     """
                 }
             }
         }
 
-        stage('Get Ingress URL') {
+        stage('Test Deployment') {
             steps {
                 script {
-                    def ingressIP = sh(script: "kubectl get ingress backend-deployment-test-ingress -n ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'", returnStdout: true).trim()
-                    if (ingressIP) {
-                        echo "Application deployed successfully at: http://${ingressIP}"
-                    } else {
-                        echo "Ingress is pending an IP assignment. You can try accessing it via http://${INGRESS_HOST} after configuring /etc/hosts."
-                    }
+                    echo 'Testing the deployment...'
+                    // You can add a test command, such as querying the Ingress URL
+                    sh """
+                        curl -H 'Host: nestjs.local' http://$MINIKUBE_IP.nip.io
+                    """
                 }
             }
         }
@@ -179,20 +149,14 @@ pipeline {
 
     post {
         always {
-            cleanWs()
+            echo 'Cleaning up...'
+            sh 'kubectl delete -f nestjs-deployment.yaml || true'
         }
         success {
-            script {
-                def ingressIP = sh(script: "kubectl get ingress backend-deployment-test-ingress -n ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'", returnStdout: true).trim()
-                if (ingressIP) {
-                    echo "App is live at: http://${ingressIP}"
-                } else {
-                    echo "Ingress might not have an external IP yet. Access via http://${INGRESS_HOST} after configuring /etc/hosts."
-                }
-            }
+            echo 'Deployment successful!'
         }
         failure {
-            echo "Deployment failed! Please check the logs."
+            echo 'Deployment failed.'
         }
     }
 }
