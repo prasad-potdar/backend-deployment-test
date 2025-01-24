@@ -56,10 +56,9 @@ pipeline {
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yml
+                        kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
                     """
 
-
-                        // kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
                     // Verify deployment rollout
                     sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
                 }
