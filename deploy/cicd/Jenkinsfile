@@ -140,7 +140,7 @@ pipeline {
 
                     // Update the deployment YAML with the correct image tag
                     sh """
-                    sed -i 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
+                    sed -i '' 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yml
@@ -157,7 +157,7 @@ pipeline {
                 script {
                     echo "Applying Ingress resource..."
                     sh """
-                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/backend.ingress.yml
+                    kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
                     """
                 }
             }
