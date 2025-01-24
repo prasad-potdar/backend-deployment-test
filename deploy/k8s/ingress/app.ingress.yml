@@ -4,10 +4,11 @@ metadata:
   name: backend-deployment-test-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
   rules:
-    - host: backend.local
+    - host: 192.168.49.2.nip.io
       http:
         paths:
           - path: /
