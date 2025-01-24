@@ -1,122 +1,46 @@
-// pipeline {
-//     agent { label env.DEPLOYMENT_ENV }
-
-//     environment {
-//         GIT_REPO_URL = 'https://github.com/prasad-potdar/backend-deployment-test.git'
-//         GIT_BRANCH = 'main'  // Change this to read from Jenkins environment or pass dynamically
-//         IMAGE_NAME = 'backend-deployment-test'
-//         REGISTRY_HOST = 'prasadmpotdar'
-//         FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
-//         DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
-//         K8S_NAMESPACE = 'default'  // Change if you want to deploy to a different namespace
-//     }
-
-//     stages {
-//         stage('Clone Repository') {
-//             steps {
-//                 script {
-//                     echo "Cloning repository: ${GIT_REPO_URL} (branch: ${GIT_BRANCH})"
-//                     checkout scm: [$class: 'GitSCM', 
-//                         branches: [[name: "*/${GIT_BRANCH}"]],
-//                         userRemoteConfigs: [[url: GIT_REPO_URL]]
-//                     ]
-//                 }
-//             }
-//         }
-
-//         stage('Build and Push Docker Image') {
-//             steps {
-//                 script {
-//                     withCredentials([string(credentialsId: 'docker-hub-access-token', variable: 'DOCKER_ACCESS_TOKEN')]) {
-//                         echo "Logging into Docker Hub..."
-//                         sh """
-//                         echo $DOCKER_ACCESS_TOKEN | docker login -u $REGISTRY_HOST --password-stdin
-//                         """
-
-//                         echo "Building and pushing Docker image..."
-//                         sh """
-//                         docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .
-//                         docker tag ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} ${FULL_IMAGE_NAME}:latest
-//                         docker push ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}
-//                         docker push ${FULL_IMAGE_NAME}:latest
-//                         """
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Deploy to Kubernetes') {
-//             steps {
-//                 script {
-//                     echo "Deploying to Kubernetes in namespace: ${K8S_NAMESPACE}"
-
-//                     // Replace image tag in YAML and deploy to K8s
-//                     sh """
-//                     sed -i '' 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
-//                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
-//                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
-//                     kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yml
-//                     """
-
-//                     // Verify deployment rollout
-//                     // sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
-//                 }
-//             }
-//         }
-//     }
-
-//     post {
-//         always {
-//             cleanWs()
-//         }
-//         success {
-//             echo "Docker Image successfully pushed to: ${DOCKER_REPO_URL}"
-//             echo "Deployment completed successfully!"
-//         }
-//         failure {
-//             echo "Deployment failed! Please check the logs."
-//         }
-//         unstable {
-//             echo "Deployment encountered issues but completed."
-//         }
-//         changed {
-//             echo "The deployment state has changed."
-//         }
-//     }
-// }
 pipeline {
-    agent any
+    agent { label env.DEPLOYMENT_ENV }
 
     environment {
-        DOCKER_IMAGE = 'backend-deployment-test'
-        MINIKUBE_IP = sh(script: "minikube ip", returnStdout: true).trim()
-        K8S_NAMESPACE = 'default'  // You can change this to your desired namespace
+        GIT_REPO_URL = 'https://github.com/prasad-potdar/backend-deployment-test.git'
+        GIT_BRANCH = 'main'  // Change this to read from Jenkins environment or pass dynamically
+        IMAGE_NAME = 'backend-deployment-test'
+        REGISTRY_HOST = 'prasadmpotdar'
+        FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
+        DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
+        K8S_NAMESPACE = 'default'  // Change if you want to deploy to a different namespace
     }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Clone Repository') {
             steps {
                 script {
-                    echo 'Building Docker image...'
-                    sh 'docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .'
+                    echo "Cloning repository: ${GIT_REPO_URL} (branch: ${GIT_BRANCH})"
+                    checkout scm: [$class: 'GitSCM', 
+                        branches: [[name: "*/${GIT_BRANCH}"]],
+                        userRemoteConfigs: [[url: GIT_REPO_URL]]
+                    ]
                 }
             }
         }
 
-        stage('Set Up Minikube Docker Env') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    echo 'Setting up Minikube Docker environment...'
-                    sh 'eval $(minikube -p minikube docker-env)'
-                }
-            }
-        }
+                    withCredentials([string(credentialsId: 'docker-hub-access-token', variable: 'DOCKER_ACCESS_TOKEN')]) {
+                        echo "Logging into Docker Hub..."
+                        sh """
+                        echo $DOCKER_ACCESS_TOKEN | docker login -u $REGISTRY_HOST --password-stdin
+                        """
 
-        stage('Push Docker Image to Minikube') {
-            steps {
-                script {
-                    echo 'Pushing Docker image to Minikube...'
-                    sh 'docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER}  -f deploy/docker/microservice.Dockerfile .'
+                        echo "Building and pushing Docker image..."
+                        sh """
+                        docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} -f deploy/docker/microservice.Dockerfile .
+                        docker tag ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER} ${FULL_IMAGE_NAME}:latest
+                        docker push ${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}
+                        docker push ${FULL_IMAGE_NAME}:latest
+                        """
+                    }
                 }
             }
         }
@@ -124,24 +48,19 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    echo 'Applying Kubernetes deployment...'
+                    echo "Deploying to Kubernetes in namespace: ${K8S_NAMESPACE}"
+
+                    // Replace image tag in YAML and deploy to K8s
                     sh """
+                        sed -i '' 's|<IMAGE_TAG>|${FULL_IMAGE_NAME}:${env.BUILD_NUMBER}|g' deploy/k8s/deployment/app.deployment.yml
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/configmap/app.configmap.yml
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/deployment/app.deployment.yml
+                        kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/service/app.service.yml
                         kubectl apply -n ${K8S_NAMESPACE} -f deploy/k8s/ingress/app.ingress.yml
                     """
-                }
-            }
-        }
 
-        stage('Test Deployment') {
-            steps {
-                script {
-                    echo 'Testing the deployment...'
-                    // You can add a test command, such as querying the Ingress URL
-                    sh """
-                        curl -H 'Host: nestjs.local' http://$MINIKUBE_IP.nip.io
-                    """
+                    Verify deployment rollout
+                    sh "kubectl rollout status deployment/backend-deployment-test -n ${K8S_NAMESPACE}"
                 }
             }
         }
@@ -149,14 +68,20 @@ pipeline {
 
     post {
         always {
-            echo 'Cleaning up...'
-            sh 'kubectl delete -f nestjs-deployment.yaml || true'
+            cleanWs()
         }
         success {
-            echo 'Deployment successful!'
+            echo "Docker Image successfully pushed to: ${DOCKER_REPO_URL}"
+            echo "Deployment completed successfully!"
         }
         failure {
-            echo 'Deployment failed.'
+            echo "Deployment failed! Please check the logs."
+        }
+        unstable {
+            echo "Deployment encountered issues but completed."
+        }
+        changed {
+            echo "The deployment state has changed."
         }
     }
 }
