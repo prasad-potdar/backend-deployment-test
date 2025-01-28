@@ -11,7 +11,7 @@ pipeline {
             steps {
                 sh '''
                     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # Load nvm
-                    nvm use 14.16.1
+                    nvm use 20.9.0
 
                     pnpm install
                     rm -f jest_html_reporters.html
