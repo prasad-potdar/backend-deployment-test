@@ -135,10 +135,4 @@ pipeline {
         }
 
     }
-    
-    post {
-        always {
-            // Clean up actions, e.g., archiving test results
-        }
-    }
 }
