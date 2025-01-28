@@ -98,14 +98,10 @@ pipeline {
         stage('Setup Node Environment') {
             steps {
                 sh '''
-                export NVM_DIR="$HOME/.nvm"
-                if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-                  echo "NVM is not installed or sourced incorrectly"
-                  exit 1
-                fi
-                . "$NVM_DIR/nvm.sh"
-                nvm install 20.9.0 --reinstall-packages-from=current
-                nvm use 20.9.0
+                    echo "Installed Node.js versions:"
+                    nvm list
+                    echo "Active Node.js version:"
+                    node -v
                 '''
             }
         }
