@@ -93,16 +93,37 @@ pipeline {
     agent any
 
     environment {
-        // Optional: You can set environment variables here, such as the Node version
-        NODE_VERSION = '16.x' // Change as per your requirement
+        NODE_VERSION = '16.x'  // Set the desired Node.js version
+        NVM_DIR = "$HOME/.nvm" // Directory for NVM
+        NODE_OPTIONS = "--max-old-space-size=8192" // Optional: Increase the max memory for Node.js processes
     }
 
     stages {
         stage('Install Dependencies') {
             steps {
                 script {
-                    // Install Node.js and dependencies using npm
-                    // If you're using a different package manager like pnpm, replace `npm install` with the appropriate command
+                    // Install Node.js version using NVM if necessary
+                    echo "Checking if NVM is installed..."
+                    if (!fileExists("$NVM_DIR/nvm.sh")) {
+                        echo "NVM not found. Installing NVM..."
+                        sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash'
+                    }
+
+                    echo "Loading NVM..."
+                    sh '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+
+                    // Install the required Node.js version using NVM
+                    echo "Checking Node.js version..."
+                    sh '''
+                    if ! nvm use $NODE_VERSION; then
+                        echo "Node.js $NODE_VERSION not installed. Installing Node.js $NODE_VERSION..."
+                        nvm install $NODE_VERSION
+                    fi
+                    nvm use $NODE_VERSION
+                    node -v
+                    '''
+                    
+                    // Install project dependencies using pnpm
                     sh 'pnpm install'
                 }
             }
@@ -111,9 +132,9 @@ pipeline {
         stage('Run Jest Tests') {
             steps {
                 script {
-                    // Run Jest tests using npm
-                    // If you have a custom command for Jest, replace `npm run test` accordingly
-                    sh 'pnpm run test -- --ci --verbose' // `--ci` is used to run tests in CI mode
+                    // Run Jest tests with the necessary flags
+                    echo "Running Jest tests..."
+                    sh 'pnpm run test -- --ci --verbose' // Adjust this command if necessary
                 }
             }
         }
@@ -121,17 +142,31 @@ pipeline {
 
     post {
         always {
-            // Always run this block, regardless of success or failure
+            // Always execute this block, regardless of build result
             echo 'Cleaning up...'
-            // Add any cleanup commands here, if necessary
+            sh 'rm -f jest_html_reporters.html'
+
+            // Move any reports to a dedicated directory
+            sh 'mkdir -p reports && mv jest_html_reporters.html ./reports'
+
+            // Optionally, process Jest results (e.g., using Jest result processor)
+            sh 'node jest-result-processor.js'
         }
+
         success {
-            // Actions to take if the build is successful
-            echo 'Tests passed successfully!'
+            echo 'Jest tests completed successfully!'
         }
+
         failure {
-            // Actions to take if the build fails
-            echo 'Tests failed. Check the logs for details.'
+            echo 'Jest tests failed! Check the logs for more details.'
+        }
+
+        unstable {
+            echo 'Jest tests completed with some issues but not critical.'
+        }
+
+        aborted {
+            echo 'Jest tests were aborted.'
         }
     }
 }
