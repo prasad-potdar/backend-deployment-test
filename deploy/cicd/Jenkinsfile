@@ -2,8 +2,6 @@ pipeline {
     agent { label env.DEPLOYMENT_ENV }
 
     environment {
-        GIT_REPO_URL = 'https://github.com/prasad-potdar/backend-deployment-test.git'
-        GIT_BRANCH = 'main'  // Change this to read from Jenkins environment or pass dynamically
         IMAGE_NAME = 'backend-deployment-test'
         REGISTRY_HOST = 'prasadmpotdar'
         FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
@@ -12,17 +10,6 @@ pipeline {
     }
 
     stages {
-        // stage('Clone Repository') {
-        //     steps {
-        //         script {
-        //             echo "Cloning repository: ${GIT_REPO_URL} (branch: ${GIT_BRANCH})"
-        //             checkout scm: [$class: 'GitSCM', 
-        //                 branches: [[name: "*/${GIT_BRANCH}"]],
-        //                 userRemoteConfigs: [[url: GIT_REPO_URL]]
-        //             ]
-        //         }
-        //     }
-        // }
 
         stage('Build and Push Docker Image') {
             steps {
