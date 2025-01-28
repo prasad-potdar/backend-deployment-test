@@ -93,80 +93,52 @@ pipeline {
     agent any
 
     environment {
-        NODE_VERSION = '16.x'  // Set the desired Node.js version
-        NVM_DIR = "$HOME/.nvm" // Directory for NVM
-        NODE_OPTIONS = "--max-old-space-size=8192" // Optional: Increase the max memory for Node.js processes
+        NVM_DIR = "${HOME}/.nvm"
     }
 
     stages {
-        stage('Install Dependencies') {
+        stage('Setup NVM') {
             steps {
                 script {
-                    // Install Node.js version using NVM if necessary
-                    echo "Checking if NVM is installed..."
-                    if (!fileExists("$NVM_DIR/nvm.sh")) {
-                        echo "NVM not found. Installing NVM..."
-                        sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash'
+                    // Ensure NVM is loaded
+                    if (fileExists("${env.NVM_DIR}/nvm.sh")) {
+                        sh ". ${env.NVM_DIR}/nvm.sh"
                     }
-
-                    echo "Loading NVM..."
-                    sh '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-
-                    // Install the required Node.js version using NVM
-                    echo "Checking Node.js version..."
-                    sh '''
-                    if ! nvm use $NODE_VERSION; then
-                        echo "Node.js $NODE_VERSION not installed. Installing Node.js $NODE_VERSION..."
-                        nvm install $NODE_VERSION
-                    fi
-                    nvm use $NODE_VERSION
-                    node -v
-                    '''
-                    
-                    // Install project dependencies using pnpm
-                    sh 'pnpm install'
                 }
             }
         }
 
-        stage('Run Jest Tests') {
+        stage('Install Node.js') {
             steps {
                 script {
-                    // Run Jest tests with the necessary flags
-                    echo "Running Jest tests..."
-                    sh 'pnpm run test -- --ci --verbose' // Adjust this command if necessary
+                    // Install a specific Node.js version using NVM
+                    sh """
+                        . ${env.NVM_DIR}/nvm.sh
+                        nvm install 16  # You can replace '16' with your desired version
+                    """
                 }
             }
         }
-    }
 
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Ensure the correct version is in use
+                    sh """
+                        . ${env.NVM_DIR}/nvm.sh
+                        nvm use 16  # Use the version you've installed
+                        npm install  # Install dependencies
+                        npm test:e2e     # Run your tests
+                    """
+                }
+            }
+        }
+
+    }
+    
     post {
         always {
-            // Always execute this block, regardless of build result
-            echo 'Cleaning up...'
-            sh 'rm -f jest_html_reporters.html'
-
-            // Move any reports to a dedicated directory
-            sh 'mkdir -p reports && mv jest_html_reporters.html ./reports'
-
-            // Optionally, process Jest results (e.g., using Jest result processor)
-            sh 'node jest-result-processor.js'
-        }
-
-        success {
-            echo 'Jest tests completed successfully!'
-        }
-
-        failure {
-            echo 'Jest tests failed! Check the logs for more details.'
-        }
-
-        unstable {
-            echo 'Jest tests completed with some issues but not critical.'
-        }
-
-        aborted {
-            echo 'Jest tests were aborted.'
+            // Clean up actions, e.g., archiving test results
         }
     }
 }
