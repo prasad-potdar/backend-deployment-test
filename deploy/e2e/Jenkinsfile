@@ -1,90 +1,111 @@
+// pipeline {
+//     agent { label env.DEPLOYMENT_ENV }
+
+//     environment {
+//         NODE_OPTIONS = "--max-old-space-size=8192"
+//         NVM_DIR = "$HOME/.nvm"
+//     }
+
+//     stages {
+//         stage('Run Tests') {
+//             steps {
+//                 sh '''
+//                     echo "Checking if NVM is installed..."
+//                     if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+//                         echo "NVM not found. Installing NVM..."
+//                         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+//                         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+//                         echo "NVM installed successfully."
+//                     else
+//                         echo "NVM is already installed."
+//                         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+//                     fi
+
+//                     echo "Checking Node.js version..."
+//                     if ! nvm use 20.9.0; then
+//                         echo "Node.js 20.9.0 not installed. Installing Node.js 20.9.0..."
+//                         nvm install 20.9.0
+//                     fi
+//                     nvm use 20.9.0
+//                     echo "Node.js version:"
+//                     node -v
+
+//                     pnpm install
+//                     rm -f jest_html_reporters.html
+
+//                     # Running tests with dotenv environment variables
+//                     pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
+//                 '''
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             sh '''
+//                 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+//                 nvm use 20.9.0
+//                 node jest-result-processor.js
+
+//                 # Organize and archive reports
+//                 rm -rf reports
+//                 mkdir reports
+//                 mv jest_html_reporters.html ./reports
+//             '''
+//             allure([
+//                 includeProperties: false,
+//                 reportBuildPolicy: 'ALWAYS',
+//                 results: [[path: 'allure-results']]
+//             ])
+//             publishHTML(target: [
+//                 allowMissing: true,
+//                 alwaysLinkToLastBuild: true,
+//                 keepAll: true,
+//                 reportDir: 'jest-stare',
+//                 reportFiles: 'index.html',
+//                 reportName: "Jest Stare"
+//             ])
+//             publishHTML(target: [
+//                 allowMissing: true,
+//                 alwaysLinkToLastBuild: true,
+//                 keepAll: true,
+//                 reportDir: 'reports',
+//                 reportFiles: 'jest_html_reporters.html',
+//                 reportName: "E2E Report"
+//             ])
+//         }
+//         aborted {
+//             echo "E2E Tests aborted."
+//         }
+//         success {
+//             echo "E2E Tests completed successfully."
+//         }
+//         unstable {
+//             echo "E2E Tests encountered issues but completed."
+//         }
+//         failure {
+//             echo "E2E Tests failed! Please check the logs."
+//         }
+//     }
+// }
+
 pipeline {
-    agent { label env.DEPLOYMENT_ENV }
-
-    environment {
-        NODE_OPTIONS = "--max-old-space-size=8192"
-        NVM_DIR = "$HOME/.nvm"
-    }
-
+    agent any
     stages {
-        stage('Run Tests') {
+        stage('Setup Node Environment') {
             steps {
                 sh '''
-                    echo "Checking if NVM is installed..."
-                    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-                        echo "NVM not found. Installing NVM..."
-                        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-                        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                        echo "NVM installed successfully."
-                    else
-                        echo "NVM is already installed."
-                        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                    fi
-
-                    echo "Checking Node.js version..."
-                    if ! nvm use 20.9.0; then
-                        echo "Node.js 20.9.0 not installed. Installing Node.js 20.9.0..."
-                        nvm install 20.9.0
-                    fi
-                    nvm use 20.9.0
-                    echo "Node.js version:"
-                    node -v
-
-                    pnpm install
-                    rm -f jest_html_reporters.html
-
-                    # Running tests with dotenv environment variables
-                    pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+                nvm install 20.9.0
+                nvm use 20.9.0
                 '''
             }
         }
-    }
-
-    post {
-        always {
-            sh '''
-                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                nvm use 20.9.0
-                node jest-result-processor.js
-
-                # Organize and archive reports
-                rm -rf reports
-                mkdir reports
-                mv jest_html_reporters.html ./reports
-            '''
-            allure([
-                includeProperties: false,
-                reportBuildPolicy: 'ALWAYS',
-                results: [[path: 'allure-results']]
-            ])
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'jest-stare',
-                reportFiles: 'index.html',
-                reportName: "Jest Stare"
-            ])
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'jest_html_reporters.html',
-                reportName: "E2E Report"
-            ])
-        }
-        aborted {
-            echo "E2E Tests aborted."
-        }
-        success {
-            echo "E2E Tests completed successfully."
-        }
-        unstable {
-            echo "E2E Tests encountered issues but completed."
-        }
-        failure {
-            echo "E2E Tests failed! Please check the logs."
+        stage('Run Tests') {
+            steps {
+                sh 'npm install && npm test'
+            }
         }
     }
 }
