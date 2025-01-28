@@ -10,8 +10,25 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # Load nvm
+                    echo "Checking if NVM is installed..."
+                    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+                        echo "NVM not found. Installing NVM..."
+                        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+                        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                        echo "NVM installed successfully."
+                    else
+                        echo "NVM is already installed."
+                        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    fi
+
+                    echo "Checking Node.js version..."
+                    if ! nvm use 20.9.0; then
+                        echo "Node.js 20.9.0 not installed. Installing Node.js 20.9.0..."
+                        nvm install 20.9.0
+                    fi
                     nvm use 20.9.0
+                    echo "Node.js version:"
+                    node -v
 
                     pnpm install
                     rm -f jest_html_reporters.html
