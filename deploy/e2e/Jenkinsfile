@@ -103,7 +103,11 @@ pipeline {
                 nvmIoJsOrgMirror: 'https://iojs.org/dist',
                 nvmNodeJsOrgMirror: 'https://nodejs.org/dist', 
                 version: '20.9.0') {
-                        sh "npm install"
+                    sh '''
+                        echo "Installing pnpm if not available..."
+                        npm install -g pnpm || true
+                        pnpm install
+                    '''
                 }
             }
         }
