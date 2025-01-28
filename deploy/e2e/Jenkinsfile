@@ -97,40 +97,18 @@ pipeline {
     }
 
     stages {
-        stage('Setup NVM') {
+       stage('Install NVM') {
             steps {
-                script {
-                    // Ensure NVM is loaded
-                    if (fileExists("${env.NVM_DIR}/nvm.sh")) {
-                        sh ". ${env.NVM_DIR}/nvm.sh"
-                    }
-                }
+                sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash'
+                sh 'source ~/.bashrc' // Ensure NVM is loaded in the current shell session 
             }
         }
-
-        stage('Install Node.js') {
+        
+        stage('Use Node Version') {
             steps {
-                script {
-                    // Install a specific Node.js version using NVM
-                    sh """
-                        . ${env.NVM_DIR}/nvm.sh
-                        nvm install 16  # You can replace '16' with your desired version
-                    """
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                script {
-                    // Ensure the correct version is in use
-                    sh """
-                        . ${env.NVM_DIR}/nvm.sh
-                        nvm use 16  # Use the version you've installed
-                        npm install  # Install dependencies
-                        npm test:e2e     # Run your tests
-                    """
-                }
+                sh 'nvm install 16.18.0' // Install desired Node.js version
+                sh 'nvm use 16.18.0' // Switch to the installed version
+                sh 'node -v' // Verify the version 
             }
         }
 
