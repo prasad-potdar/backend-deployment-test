@@ -91,32 +91,47 @@
 
 pipeline {
     agent any
+
     environment {
-        NVM_DIR = "${HOME}/.nvm"
-        NODE_VERSION = "20.9.0"
+        // Optional: You can set environment variables here, such as the Node version
+        NODE_VERSION = '16.x' // Change as per your requirement
     }
+
     stages {
-        stage('Setup Node.js Environment') {
+        stage('Install Dependencies') {
             steps {
-                sh '''
-                if [ ! -d "$NVM_DIR" ]; then
-                  echo "NVM is not installed. Please install it first."
-                  exit 1
-                fi
-                . "$NVM_DIR/nvm.sh"
-                
-                # Check if NVM is sourced properly
-                if ! command -v nvm >/dev/null; then
-                  echo "NVM is not available even after sourcing. Exiting."
-                  exit 1
-                fi
-                
-                nvm install $NODE_VERSION
-                nvm alias default $NODE_VERSION
-                nvm use default
-                node -v
-                '''
+                script {
+                    // Install Node.js and dependencies using npm
+                    // If you're using a different package manager like pnpm, replace `npm install` with the appropriate command
+                    sh 'pnpm install'
+                }
             }
+        }
+
+        stage('Run Jest Tests') {
+            steps {
+                script {
+                    // Run Jest tests using npm
+                    // If you have a custom command for Jest, replace `npm run test` accordingly
+                    sh 'pnpm run test -- --ci --verbose' // `--ci` is used to run tests in CI mode
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Always run this block, regardless of success or failure
+            echo 'Cleaning up...'
+            // Add any cleanup commands here, if necessary
+        }
+        success {
+            // Actions to take if the build is successful
+            echo 'Tests passed successfully!'
+        }
+        failure {
+            // Actions to take if the build fails
+            echo 'Tests failed. Check the logs for details.'
         }
     }
 }
