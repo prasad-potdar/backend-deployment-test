@@ -97,18 +97,16 @@ pipeline {
     }
 
     stages {
-        stage('Install NVM') {
+        stage("Build") {
             steps {
-                sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash'
-                sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-            }
-        }
-
-        stage('Use Node Version') {
-            steps {
-               sh """
-                nvm list
-               """
+                nvm(nvmInstallURL: 'https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh', 
+                nvmIoJsOrgMirror: 'https://iojs.org/dist',
+                nvmNodeJsOrgMirror: 'https://nodejs.org/dist', 
+                version: '8.1.2') {
+                        sh "npm install"
+                        echo "Build main site distribution"
+                        sh "npm run build:dist"
+                }
             }
         }
     }
