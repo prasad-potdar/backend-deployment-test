@@ -95,36 +95,37 @@ pipeline {
         NVM_DIR = "${HOME}/.nvm"
     }
     stages {
-        stage('Setup Node Environment') {
+        stage('Setup NVM and Node.js') {
             steps {
-                sh '''
-                    export NVM_DIR="$HOME/.nvm"
-
-                    # Verify if NVM directory exists
+                script {
+                    // Check if NVM is installed and set up the environment
+                    sh '''
                     if [ ! -d "$NVM_DIR" ]; then
-                    echo "NVM is not installed. Please install it first."
-                    exit 1
+                        echo "NVM is not installed. Please install it first."
+                        exit 1
                     fi
 
                     # Source NVM scripts
                     . "$NVM_DIR/nvm.sh"
                     . "$NVM_DIR/bash_completion"
 
-                    # Check if NVM is available
+                    # Ensure NVM is sourced and usable
                     if ! command -v nvm >/dev/null; then
-                    echo "NVM is not available even after sourcing. Exiting."
-                    exit 1
+                        echo "NVM is not available even after sourcing. Exiting."
+                        exit 1
                     fi
 
-                    # Install and use the correct Node.js version
-                    nvm install 20.9.0 --reinstall-packages-from=current
-                    nvm use 20.9.0
+                    # Install and set the desired Node.js version
+                    nvm install "$NODE_VERSION" --reinstall-packages-from=current
+                    nvm alias default "$NODE_VERSION"
+                    nvm use default
 
                     echo "Installed Node.js versions:"
                     nvm list
                     echo "Active Node.js version:"
                     node -v
-                '''
+                    '''
+                }
             }
         }
     }
