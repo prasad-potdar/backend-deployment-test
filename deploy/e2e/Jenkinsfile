@@ -89,26 +89,118 @@
 //     }
 // }
 
+// pipeline {
+//     agent any
+
+//     environment {
+//         NVM_DIR = "${HOME}/.nvm"
+//     }
+
+//     stages {
+//         stage("Install Node and Dependencies") {
+//             steps {
+//                 script {
+//                     // Use the NVM plugin to install Node.js version 20.9.0
+//                     nvm(version: '20.9.0') {
+//                         // Ensure pnpm is installed and dependencies are installed using pnpm
+//                         sh '''
+//                             echo "Installing pnpm if not available..."
+//                             npm install -g pnpm || true
+//                             pnpm install
+//                         '''
+//                     }
+//                 }
+//             }
+//         }
+
+//         stage("Run Tests") {
+//             steps {
+//                 script {
+//                     // Run the tests with the specified options
+//                     sh '''
+//                         echo "Running E2E tests..."
+//                         pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
+//                     '''
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             script {
+//                 // Ensure NVM is sourced and use the correct Node.js version
+//                 echo "Ensuring Node.js version is correctly set..."
+//                 sh '''
+//                     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+//                     nvm use 20.9.0
+//                 '''
+//             }
+//             // Archive test results and generate reports
+//             allure([
+//                 includeProperties: false,
+//                 reportBuildPolicy: 'ALWAYS',
+//                 results: [[path: 'allure-results']]
+//             ])
+//             publishHTML(target: [
+//                 allowMissing: true,
+//                 alwaysLinkToLastBuild: true,
+//                 keepAll: true,
+//                 reportDir: 'jest-stare',
+//                 reportFiles: 'index.html',
+//                 reportName: "Jest Stare"
+//             ])
+//             publishHTML(target: [
+//                 allowMissing: true,
+//                 alwaysLinkToLastBuild: true,
+//                 keepAll: true,
+//                 reportDir: 'reports',
+//                 reportFiles: 'jest_html_reporters.html',
+//                 reportName: "E2E Report"
+//             ])
+//         }
+//         aborted {
+//             echo "E2E Tests aborted."
+//         }
+//         success {
+//             echo "E2E Tests completed successfully."
+//         }
+//         unstable {
+//             echo "E2E Tests encountered issues but completed."
+//         }
+//         failure {
+//             echo "E2E Tests failed! Please check the logs."
+//         }
+//     }
+// }
+
+
 pipeline {
     agent any
 
     environment {
-        NVM_DIR = "${HOME}/.nvm"
+        NVM_DIR = "${HOME}/.nvm"  // Make sure NVM_DIR is set correctly
     }
 
     stages {
         stage("Install Node and Dependencies") {
             steps {
                 script {
-                    // Use the NVM plugin to install Node.js version 20.9.0
-                    nvm(version: '20.9.0') {
-                        // Ensure pnpm is installed and dependencies are installed using pnpm
-                        sh '''
-                            echo "Installing pnpm if not available..."
-                            npm install -g pnpm || true
-                            pnpm install
-                        '''
-                    }
+                    // Install Node.js version using nvm
+                    echo "Installing Node.js version 20.9.0"
+                    sh '''
+                        # Ensure nvm is sourced
+                        [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
+                        # Install the required Node version (20.9.0)
+                        nvm install 20.9.0
+                        nvm use 20.9.0
+                        echo "Using Node.js version: $(node -v)"
+                        
+                        # Install pnpm and dependencies
+                        echo "Installing pnpm..."
+                        npm install -g pnpm
+                        pnpm install
+                    '''
                 }
             }
         }
@@ -116,9 +208,12 @@ pipeline {
         stage("Run Tests") {
             steps {
                 script {
-                    // Run the tests with the specified options
+                    // Running the tests
+                    echo "Running E2E tests"
                     sh '''
-                        echo "Running E2E tests..."
+                        # Ensure the environment is correct before running the tests
+                        [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
+                        nvm use 20.9.0  # Ensure the correct version is used before running tests
                         pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
                     '''
                 }
@@ -129,11 +224,13 @@ pipeline {
     post {
         always {
             script {
-                // Ensure NVM is sourced and use the correct Node.js version
-                echo "Ensuring Node.js version is correctly set..."
+                // Debugging NVM usage
+                echo "Post Actions: Ensuring NVM and Node.js version"
                 sh '''
-                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    # Ensure NVM is sourced again in the post block
+                    [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
                     nvm use 20.9.0
+                    echo "Node.js version in post block: $(node -v)"
                 '''
             }
             // Archive test results and generate reports
@@ -158,15 +255,6 @@ pipeline {
                 reportFiles: 'jest_html_reporters.html',
                 reportName: "E2E Report"
             ])
-        }
-        aborted {
-            echo "E2E Tests aborted."
-        }
-        success {
-            echo "E2E Tests completed successfully."
-        }
-        unstable {
-            echo "E2E Tests encountered issues but completed."
         }
         failure {
             echo "E2E Tests failed! Please check the logs."
