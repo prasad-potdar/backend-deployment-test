@@ -1,0 +1,73 @@
+pipeline {
+    agent { label 'qa' }
+
+    environment {
+        NODE_OPTIONS = "--max-old-space-size=8192"
+        NVM_DIR = "$HOME/.nvm"
+    }
+
+    stages {
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # Load nvm
+                    nvm use 14.16.1
+
+                    pnpm install
+                    rm -f jest_html_reporters.html
+
+                    # Running tests with dotenv environment variables
+                    npx dotenv -e .env -- pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                nvm use 20.9.0
+                node jest-result-processor.js
+
+                # Organize and archive reports
+                rm -rf reports
+                mkdir reports
+                mv jest_html_reporters.html ./reports
+            '''
+            allure([
+                includeProperties: false,
+                reportBuildPolicy: 'ALWAYS',
+                results: [[path: 'allure-results']]
+            ])
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'jest-stare',
+                reportFiles: 'index.html',
+                reportName: "Jest Stare"
+            ])
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'reports',
+                reportFiles: 'jest_html_reporters.html',
+                reportName: "E2E Report"
+            ])
+        }
+        aborted {
+            echo "E2E Tests aborted."
+        }
+        success {
+            echo "E2E Tests completed successfully."
+        }
+        unstable {
+            echo "E2E Tests encountered issues but completed."
+        }
+        failure {
+            echo "E2E Tests failed! Please check the logs."
+        }
+    }
+}
