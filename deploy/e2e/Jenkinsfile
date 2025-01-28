@@ -100,18 +100,16 @@ pipeline {
         stage('Install NVM') {
             steps {
                 sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash'
-                // Explicitly load NVM without using the backslash
                 sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
             }
         }
-        
+
         stage('Use Node Version') {
             steps {
-                // Explicitly load NVM again before using it
                 sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-                sh 'nvm install 16.18.0' // Install desired Node.js version
-                sh 'nvm use 16.18.0' // Switch to the installed version
-                sh 'node -v' // Verify the version 
+                sh 'nvm install 16.18.0' // Explicitly install the Node.js version
+                sh 'nvm use 16.18.0'     // Use the installed version
+                sh 'node -v'             // Verify that the correct version is being used
             }
         }
     }
