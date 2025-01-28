@@ -17,7 +17,7 @@ pipeline {
                     rm -f jest_html_reporters.html
 
                     # Running tests with dotenv environment variables
-                    npx dotenv -e .env -- pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
+                    pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
                 '''
             }
         }
