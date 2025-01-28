@@ -97,23 +97,30 @@ pipeline {
     }
 
     stages {
-        stage("Build") {
+        stage("Install Node and Dependencies") {
             steps {
                 script {
                     // Use the NVM plugin to install Node.js version 20.9.0
                     nvm(version: '20.9.0') {
-                        // Once Node.js is installed, proceed with the commands
+                        // Ensure pnpm is installed and dependencies are installed using pnpm
                         sh '''
                             echo "Installing pnpm if not available..."
                             npm install -g pnpm || true
                             pnpm install
-
-                            rm -f jest_html_reporters.html
-
-                            # Running tests with dotenv environment variables
-                            pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
                         '''
                     }
+                }
+            }
+        }
+
+        stage("Run Tests") {
+            steps {
+                script {
+                    // Run the tests with the specified options
+                    sh '''
+                        echo "Running E2E tests..."
+                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
+                    '''
                 }
             }
         }
@@ -121,17 +128,15 @@ pipeline {
 
     post {
         always {
-            sh '''
-                # Ensure NVM is sourced and use Node.js version 20.9.0
-                [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                nvm use 20.9.0
-                node jest-result-processor.js
-
-                # Organize and archive reports
-                rm -rf reports
-                mkdir reports
-                mv jest_html_reporters.html ./reports
-            '''
+            script {
+                // Ensure NVM is sourced and use the correct Node.js version
+                echo "Ensuring Node.js version is correctly set..."
+                sh '''
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    nvm use 20.9.0
+                '''
+            }
+            // Archive test results and generate reports
             allure([
                 includeProperties: false,
                 reportBuildPolicy: 'ALWAYS',
