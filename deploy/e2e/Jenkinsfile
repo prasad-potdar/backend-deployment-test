@@ -106,10 +106,9 @@ pipeline {
 
         stage('Use Node Version') {
             steps {
-                sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-                sh 'nvm install 16.18.0' // Explicitly install the Node.js version
-                sh 'nvm use 16.18.0'     // Use the installed version
-                sh 'node -v'             // Verify that the correct version is being used
+               sh """
+                nvm list
+               """
             }
         }
     }
