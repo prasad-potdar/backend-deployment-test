@@ -107,6 +107,11 @@ pipeline {
                         echo "Installing pnpm if not available..."
                         npm install -g pnpm || true
                         pnpm install
+
+                        rm -f jest_html_reporters.html
+
+                        # Running tests with dotenv environment variables
+                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
                     '''
                 }
             }
