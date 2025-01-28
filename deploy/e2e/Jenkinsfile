@@ -91,17 +91,30 @@
 
 pipeline {
     agent any
+    environment {
+        NVM_DIR = "${HOME}/.nvm"
+        NODE_VERSION = "20.9.0"
+    }
     stages {
-        stage('Run tests') {
+        stage('Setup Node.js Environment') {
             steps {
                 sh '''
-                    NVM_DIR="$HOME/.nvm"
-                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
-                    nvm use 20.9.0
-
-                    pnpm
-                    rm -f jest_html_reporters.html
-                    pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json' $TEST_SUITE
+                if [ ! -d "$NVM_DIR" ]; then
+                  echo "NVM is not installed. Please install it first."
+                  exit 1
+                fi
+                . "$NVM_DIR/nvm.sh"
+                
+                # Check if NVM is sourced properly
+                if ! command -v nvm >/dev/null; then
+                  echo "NVM is not available even after sourcing. Exiting."
+                  exit 1
+                fi
+                
+                nvm install $NODE_VERSION
+                nvm alias default $NODE_VERSION
+                nvm use default
+                node -v
                 '''
             }
         }
