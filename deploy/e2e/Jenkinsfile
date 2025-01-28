@@ -99,22 +99,24 @@ pipeline {
             steps {
                 sh '''
                     export NVM_DIR="$HOME/.nvm"
+
+                    # Verify if NVM directory exists
                     if [ ! -d "$NVM_DIR" ]; then
-                    echo "NVM is not installed. Please install it before running this pipeline."
+                    echo "NVM is not installed. Please install it first."
                     exit 1
                     fi
 
-                    # Source nvm
-                    echo "Sourcing NVM from: $NVM_DIR/nvm.sh"
+                    # Source NVM scripts
                     . "$NVM_DIR/nvm.sh"
                     . "$NVM_DIR/bash_completion"
 
-                    # Check if nvm is available
-                    if ! command -v nvm > /dev/null; then
-                    echo "NVM is still not available. Aborting."
+                    # Check if NVM is available
+                    if ! command -v nvm >/dev/null; then
+                    echo "NVM is not available even after sourcing. Exiting."
                     exit 1
                     fi
 
+                    # Install and use the correct Node.js version
                     nvm install 20.9.0 --reinstall-packages-from=current
                     nvm use 20.9.0
 
