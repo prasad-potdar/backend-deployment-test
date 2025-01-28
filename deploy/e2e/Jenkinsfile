@@ -98,6 +98,26 @@ pipeline {
         stage('Setup Node Environment') {
             steps {
                 sh '''
+                    export NVM_DIR="$HOME/.nvm"
+                    if [ ! -d "$NVM_DIR" ]; then
+                    echo "NVM is not installed. Please install it before running this pipeline."
+                    exit 1
+                    fi
+
+                    # Source nvm
+                    echo "Sourcing NVM from: $NVM_DIR/nvm.sh"
+                    . "$NVM_DIR/nvm.sh"
+                    . "$NVM_DIR/bash_completion"
+
+                    # Check if nvm is available
+                    if ! command -v nvm > /dev/null; then
+                    echo "NVM is still not available. Aborting."
+                    exit 1
+                    fi
+
+                    nvm install 20.9.0 --reinstall-packages-from=current
+                    nvm use 20.9.0
+
                     echo "Installed Node.js versions:"
                     nvm list
                     echo "Active Node.js version:"
