@@ -88,7 +88,6 @@
 //         }
 //     }
 // }
-
 pipeline {
     agent any
 
@@ -100,14 +99,15 @@ pipeline {
         stage('Install NVM') {
             steps {
                 sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash'
-                // Source the correct file based on the shell you are using (Zsh in your case)
-                sh 'source ~/.zshrc' // Ensure NVM is loaded in the current shell session 
+                // Explicitly load NVM without relying on .zshrc or .bashrc
+                sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
             }
         }
         
         stage('Use Node Version') {
             steps {
-                sh 'source ~/.zshrc' // Ensure NVM is sourced before using
+                // Explicitly load NVM again before using it
+                sh 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
                 sh 'nvm install 16.18.0' // Install desired Node.js version
                 sh 'nvm use 16.18.0' // Switch to the installed version
                 sh 'node -v' // Verify the version 
