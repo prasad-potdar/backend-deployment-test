@@ -97,20 +97,21 @@ pipeline {
     }
 
     stages {
-       stage('Install NVM') {
+        stage('Install NVM') {
             steps {
                 sh 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash'
-                sh 'source ~/.bashrc' // Ensure NVM is loaded in the current shell session 
+                // Source the correct file based on the shell you are using (Zsh in your case)
+                sh 'source ~/.zshrc' // Ensure NVM is loaded in the current shell session 
             }
         }
         
         stage('Use Node Version') {
             steps {
+                sh 'source ~/.zshrc' // Ensure NVM is sourced before using
                 sh 'nvm install 16.18.0' // Install desired Node.js version
                 sh 'nvm use 16.18.0' // Switch to the installed version
                 sh 'node -v' // Verify the version 
             }
         }
-
     }
 }
