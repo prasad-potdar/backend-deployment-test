@@ -4,9 +4,9 @@ pipeline {
     environment {
         // IMAGE_NAME = 'backend-deployment-test'
         // REGISTRY_HOST = 'prasadmpotdar'
-        FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
-        DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
-        K8S_NAMESPACE = 'default'  // Change if you want to deploy to a different namespace
+        // FULL_IMAGE_NAME = "${REGISTRY_HOST}/${IMAGE_NAME}"
+        // DOCKER_REPO_URL = 'https://hub.docker.com/r/prasadmpotdar/backend-deployment-test'
+        // K8S_NAMESPACE = 'default'  // Change if you want to deploy to a different namespace
     }
 
     stages {
