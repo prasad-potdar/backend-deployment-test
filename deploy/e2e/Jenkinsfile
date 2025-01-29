@@ -208,13 +208,13 @@
 //     }
 // }
 
-
 pipeline {
     agent any
 
     environment {
-        NODEJS_HOME = tool 'NodeJS' // Use the NodeJS installation configured in Jenkins
+        NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+        REPORT_DIR = "${WORKSPACE}/deploy/reports"
     }
 
     stages {
@@ -244,9 +244,13 @@ pipeline {
                 script {
                     sh '''
                         echo "Organizing reports..."
-                        rm -rf reports
-                        mkdir reports
-                        mv jest_html_reporters.html ./reports || true
+                        rm -rf ${REPORT_DIR}
+                        mkdir -p ${REPORT_DIR}
+                        if [ -f jest_html_reporters.html ]; then
+                            mv jest_html_reporters.html ${REPORT_DIR}
+                        else
+                            echo "jest_html_reporters.html not found. Skipping report move."
+                        fi
                     '''
                 }
             }
@@ -266,7 +270,7 @@ pipeline {
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: 'reports',
+                    reportDir: 'deploy/reports',
                     reportFiles: 'jest_html_reporters.html',
                     reportName: "E2E Report"
                 ])
