@@ -247,6 +247,9 @@ pipeline {
                         rm -rf ${REPORT_DIR}
                         mkdir -p ${REPORT_DIR}
                         mv jest_html_reporters.html ${REPORT_DIR}
+                        else
+                            echo "jest_html_reporters.html not found. Skipping report move."
+                        fi
                     '''
                 }
             }
