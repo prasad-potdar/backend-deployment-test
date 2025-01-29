@@ -261,12 +261,6 @@ pipeline {
     post {
         always {
             script {
-                // allure([
-                //     includeProperties: false,
-                //     reportBuildPolicy: 'ALWAYS',
-                //     results: [[path: 'allure-results']]
-                // ])
-
                 publishHTML(target: [
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
