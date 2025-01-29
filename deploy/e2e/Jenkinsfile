@@ -188,7 +188,6 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        nvm use 20.9.0
                         pnpm install
                     '''
                 }
