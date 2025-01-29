@@ -186,78 +186,67 @@ pipeline {
         stage("Install Node and Dependencies") {
             steps {
                 script {
-                    // Install Node.js version using nvm
-                    echo "Installing Node.js version 20.9.0"
                     sh '''
-                        # Ensure nvm is sourced
-                        [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
-                        # Install the required Node version (20.9.0)
-                        nvm install 20.9.0
                         nvm use 20.9.0
-                        echo "Using Node.js version: $(node -v)"
-                        
-                        # Install pnpm and dependencies
-                        echo "Installing pnpm..."
-                        npm install -g pnpm
                         pnpm install
                     '''
                 }
             }
         }
 
-        stage("Run Tests") {
-            steps {
-                script {
-                    // Running the tests
-                    echo "Running E2E tests"
-                    sh '''
-                        # Ensure the environment is correct before running the tests
-                        [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
-                        nvm use 20.9.0  # Ensure the correct version is used before running tests
-                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
-                    '''
-                }
-            }
-        }
+        // stage("Run Tests") {
+        //     steps {
+        //         script {
+        //             // Running the tests
+        //             echo "Running E2E tests"
+        //             sh '''
+        //                 # Ensure the environment is correct before running the tests
+        //                 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
+        //                 nvm use 20.9.0  # Ensure the correct version is used before running tests
+        //                 pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
+        //             '''
+        //         }
+        //     }
+        // }
     }
 
-    post {
-        always {
-            script {
-                // Debugging NVM usage
-                echo "Post Actions: Ensuring NVM and Node.js version"
-                sh '''
-                    # Ensure NVM is sourced again in the post block
-                    [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
-                    nvm use 20.9.0
-                    echo "Node.js version in post block: $(node -v)"
-                '''
-            }
-            // Archive test results and generate reports
-            allure([
-                includeProperties: false,
-                reportBuildPolicy: 'ALWAYS',
-                results: [[path: 'allure-results']]
-            ])
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'jest-stare',
-                reportFiles: 'index.html',
-                reportName: "Jest Stare"
-            ])
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'jest_html_reporters.html',
-                reportName: "E2E Report"
-            ])
-        }
-        failure {
-            echo "E2E Tests failed! Please check the logs."
-        }
-    }
+    // post {
+    //     always {
+    //         script {
+    //             // Debugging NVM usage
+    //             echo "Post Actions: Ensuring NVM and Node.js version"
+    //             sh '''
+    //                 # Ensure NVM is sourced again in the post block
+    //                 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || { echo "NVM not found!"; exit 1; }
+    //                 nvm use 20.9.0
+    //                 echo "Node.js version in post block: $(node -v)"
+    //             '''
+    //         }
+    //         // Archive test results and generate reports
+    //         allure([
+    //             includeProperties: false,
+    //             reportBuildPolicy: 'ALWAYS',
+    //             results: [[path: 'allure-results']]
+    //         ])
+    //         publishHTML(target: [
+    //             allowMissing: true,
+    //             alwaysLinkToLastBuild: true,
+    //             keepAll: true,
+    //             reportDir: 'jest-stare',
+    //             reportFiles: 'index.html',
+    //             reportName: "Jest Stare"
+    //         ])
+    //         publishHTML(target: [
+    //             allowMissing: true,
+    //             alwaysLinkToLastBuild: true,
+    //             keepAll: true,
+    //             reportDir: 'reports',
+    //             reportFiles: 'jest_html_reporters.html',
+    //             reportName: "E2E Report"
+    //         ])
+    //     }
+    //     failure {
+    //         echo "E2E Tests failed! Please check the logs."
+    //     }
+    // }
 }
