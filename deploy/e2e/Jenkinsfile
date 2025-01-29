@@ -175,6 +175,40 @@
 // }
 
 
+// pipeline {
+//     agent any
+
+//     environment {
+//         NODEJS_HOME = tool 'NodeJS' // Use the NodeJS installation configured in Jenkins
+//         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+//     }
+
+//     stages {
+//         stage("Install Node and Dependencies") {
+//             steps {
+//                 script {
+//                     sh '''
+//                         pnpm install
+//                     '''
+//                 }
+//             }
+//         }
+
+//         stage("Run Tests") {
+//             steps {
+//                 script {
+//                     // Running the tests
+//                     echo "Running E2E tests"
+//                     sh '''
+//                         pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
+//                     '''
+//                 }
+//             }
+//         }
+//     }
+// }
+
+
 pipeline {
     agent any
 
@@ -197,13 +231,62 @@ pipeline {
         stage("Run Tests") {
             steps {
                 script {
-                    // Running the tests
                     echo "Running E2E tests"
                     sh '''
                         pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
                     '''
                 }
             }
+        }
+
+        stage("Generate and Archive Reports") {
+            steps {
+                script {
+                    sh '''
+                        echo "Organizing reports..."
+                        rm -rf reports
+                        mkdir reports
+                        mv jest_html_reporters.html ./reports || true
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                allure([
+                    includeProperties: false,
+                    reportBuildPolicy: 'ALWAYS',
+                    results: [[path: 'allure-results']]
+                ])
+
+                publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'reports',
+                    reportFiles: 'jest_html_reporters.html',
+                    reportName: "E2E Report"
+                ])
+            }
+        }
+
+        aborted {
+            echo "E2E Tests aborted."
+        }
+
+        success {
+            echo "E2E Tests completed successfully."
+        }
+
+        unstable {
+            echo "E2E Tests encountered issues but completed."
+        }
+
+        failure {
+            echo "E2E Tests failed! Please check the logs."
         }
     }
 }
