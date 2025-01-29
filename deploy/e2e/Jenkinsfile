@@ -239,16 +239,18 @@ pipeline {
             }
         }
 
-        stage("Generate and Archive Reports") {
+         stage("Generate and Archive Reports") {
             steps {
                 script {
+                    echo "Organizing reports..."
                     sh '''
-                        echo "Organizing reports..."
                         rm -rf ${REPORT_DIR}
                         mkdir -p ${REPORT_DIR}
-                        mv jest_html_reporters.html ${REPORT_DIR}
+                        # Ensure jest-html-reporters is installed and configured properly in jest.config.js
+                        if [ -f jest_html_reporters.html ]; then
+                            mv jest_html_reporters.html ${REPORT_DIR}
                         else
-                            echo "jest_html_reporters.html not found. Skipping report move."
+                            echo "No Jest HTML report generated. Please check your configuration."
                         fi
                     '''
                 }
