@@ -10,6 +10,17 @@
   "moduleNameMapper": {
     "@app/(.*)": "<rootDir>/src/$1"
   },
-  "reporters": ["default", "../node_modules/jest-html-reporters"],
+  "reporters": [
+    "default",
+    "../node_modules/jest-html-reporters",
+    [
+      "jest-html-reporters",
+      {
+        "publicPath": "./deploy/reports",
+        "filename": "jest_html_reporters.html",
+        "expand": true
+      }
+    ]
+  ],
   "verbose": true
 }
