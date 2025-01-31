@@ -52,12 +52,13 @@ pipeline {
         always {
             script {
                 publishHTML(target: [
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
                     reportDir: 'deploy/reports',
                     reportFiles: 'jest_html_reporters.html',
-                    reportName: "E2E Report"
+                    reportName: "E2E Report",
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false,
+                    keepAll: true,
+                    escapeUnderscores: false
                 ])
             }
         }
