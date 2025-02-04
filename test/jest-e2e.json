@@ -16,7 +16,7 @@
     [
       "jest-html-reporters",
       {
-        "publicPath": "./deploy/reports",
+        "publicPath": "./",
         "filename": "jest_html_reporters.html",
         "openReport": true,
         "expand": true
