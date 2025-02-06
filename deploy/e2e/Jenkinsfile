@@ -62,10 +62,9 @@ pipeline {
             script {
                 echo "Publishing Jest E2E Report"
                 publishHTML(target: [
-                    reportDir: "${REPORT_DIR}",
-                    reportFiles: 'jest_html_reporters.html',
+                    reportDir: 'reports',  // Make sure this matches the actual directory location
+                    reportFiles: 'jest_html_reporters.html',  // Ensure this matches the generated file
                     reportName: "E2E Report",
-                    reportTitles: "E2E Report",
                     alwaysLinkToLastBuild: true,
                     allowMissing: true,
                     keepAll: true,
