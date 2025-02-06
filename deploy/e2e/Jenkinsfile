@@ -68,7 +68,8 @@ pipeline {
                     alwaysLinkToLastBuild: true,
                     allowMissing: true,
                     keepAll: true,
-                    escapeUnderscores: false
+                    escapeUnderscores: false,
+                    useWrapperFileDirectly: true
                 ])
             }
         }
