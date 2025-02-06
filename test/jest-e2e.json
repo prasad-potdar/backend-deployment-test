@@ -20,7 +20,8 @@
         "filename": "jest_html_reporters.html",
         "openReport": false,
         "expand": true,
-        "enableAttach": true
+        "enableAttach": true,
+        "inlineSource": false
       }
     ]
   ],
