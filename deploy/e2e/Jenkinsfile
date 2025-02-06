@@ -29,39 +29,39 @@ pipeline {
             }
         }
 
-        // stage("Generate and Archive Reports") {
-        //     steps {
-        //         script {
-        //             echo "Organizing reports..."
-        //             sh '''
-        //                 rm -rf ${REPORT_DIR}
-        //                 mkdir -p ${REPORT_DIR}
+        stage("Generate and Archive Reports") {
+            steps {
+                script {
+                    echo "Organizing reports..."
+                    sh '''
+                        rm -rf ${REPORT_DIR}
+                        mkdir -p ${REPORT_DIR}
                         
-        //                 # Debugging directory contents
-        //                 echo "Workspace contents:"
-        //                 ls -al ${WORKSPACE}
+                        # Debugging directory contents
+                        echo "Workspace contents:"
+                        ls -al ${WORKSPACE}
 
-        //                 # Ensure jest-html-reporters is installed and configured properly in jest.config.js
-        //                 if [ -f jest_html_reporters.html ]; then
-        //                     echo "Jest HTML report found, moving to reports directory."
-        //                     mv jest_html_reporters.html ${REPORT_DIR}/
-        //                 else
-        //                     echo "No Jest HTML report generated. Please check your configuration."
-        //                 fi
+                        # Ensure jest-html-reporters is installed and configured properly in jest.config.js
+                        if [ -f jest_html_reporters.html ]; then
+                            echo "Jest HTML report found, moving to reports directory."
+                            mv jest_html_reporters.html ${REPORT_DIR}/
+                        else
+                            echo "No Jest HTML report generated. Please check your configuration."
+                        fi
 
-        //                 echo "Final report directory contents:"
-        //                 ls -al ${REPORT_DIR}
-        //             '''
-        //         }
-        //     }
-        // }
+                        echo "Final report directory contents:"
+                        ls -al ${REPORT_DIR}
+                    '''
+                }
+            }
+        }
     }
 
     post {
         always {
             script {
                 publishHTML(target: [
-                    reportDir: 'reports',
+                    reportDir: "${REPORT_DIR}",
                     reportFiles: 'jest_html_reporters.html',
                     reportName: "E2E Report",
                     alwaysLinkToLastBuild: true,
