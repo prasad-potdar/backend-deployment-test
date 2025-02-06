@@ -19,7 +19,8 @@
         "publicPath": "./",
         "filename": "jest_html_reporters.html",
         "openReport": false,
-        "expand": true
+        "expand": true,
+        "enableAttach": true
       }
     ]
   ],
