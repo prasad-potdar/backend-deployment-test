@@ -73,7 +73,9 @@ pipeline {
                     allowMissing: true,
                     keepAll: true,
                     escapeUnderscores: false,
-                    useWrapperFileDirectly: true
+                    useWrapperFileDirectly: true,
+                    includes: '**/*',
+                    allowIframe: true
                 ])
             }
         }
