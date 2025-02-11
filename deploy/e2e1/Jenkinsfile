@@ -47,7 +47,7 @@ pipeline {
                             def testFiles = env.TEST_FILES_CSV.split(',')
                             int batchSize = env.BATCH_SIZE.toInteger()
 
-                            // def parallelStages = [:]
+                            def parallelStages = [:]
                             int numBatches = testFiles.size() / batchSize + (testFiles.size() % batchSize > 0 ? 1 : 0)
 
                             for (int i = 0; i < numBatches; i++) {
@@ -55,18 +55,18 @@ pipeline {
                                 int end = Math.min((i + 1) * batchSize, testFiles.size())
                                 def batchFiles = testFiles[start..<end].join(' ')
 
-                                // parallelStages["Batch-${i + 1}"] = {
-                                //     stage("Batch-${i + 1}") {
-                                //         steps {
+                                parallelStages["Batch-${i + 1}"] = {
+                                    stage("Batch-${i + 1}") {
+                                        steps {
                                             echo "Running Batch ${i + 1} with files:\n${batchFiles}"
-                                            // sh """
-                                            //     pnpm jest --testPathPattern="${batchFiles}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=batch-${i + 1}-report.html"
-                                            // """
-                                //         }
-                                //     }
-                                // }
+                                            sh """
+                                                pnpm test:e2e --testPathPattern="${batchFiles}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=batch-${i + 1}-report.html"
+                                            """
+                                        }
+                                    }
+                                }
                             }
-                            // parallel parallelStages
+                            parallel parallelStages
                         }
                     }
                 }
