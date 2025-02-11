@@ -74,15 +74,15 @@ pipeline {
             script {
                 echo "Publishing Jest E2E Report"
                 // Uncomment the report publishing once Jest reports are ready
-                // publishHTML(target: [
-                //     reportDir: "${REPORT_DIR}",
-                //     reportFiles: '*.html',
-                //     reportName: "Jest E2E Reports",
-                //     alwaysLinkToLastBuild: true,
-                //     allowMissing: true,
-                //     keepAll: true,
-                //     escapeUnderscores: false,
-                // ])
+                publishHTML(target: [
+                    reportDir: "${REPORT_DIR}",
+                    reportFiles: '*.html',
+                    reportName: "Jest E2E Reports",
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: true,
+                    keepAll: true,
+                    escapeUnderscores: false,
+                ])
             }
         }
 
