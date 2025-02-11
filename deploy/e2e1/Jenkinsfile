@@ -27,7 +27,7 @@ pipeline {
                         returnStdout: true
                     ).trim().split("\n").findAll { it }
 
-                    int batchSize = 50
+                    int batchSize = 3
                     int batchCount = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
 
                     echo "Total Test Files Found: ${testFiles.size()}"
@@ -52,17 +52,17 @@ pipeline {
                                 int start = i * batchSize
                                 int end = Math.min((i + 1) * batchSize, testFiles.size())
                                 def batchFiles = testFiles[start..<end].join(' ')
-
-                                parallelStages["Batch-${i + 1}"] = {
-                                    stage("Batch-${i + 1}") {
-                                        steps {
-                                            echo "Running Batch ${i + 1} with files:\n${batchFiles}"
-                                            sh """
-                                                pnpm jest --testPathPattern="${batchFiles}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=batch-${i + 1}-report.html"
-                                            """
-                                        }
-                                    }
-                                }
+                                echo "Running Batch ${i + 1} with files:\n${batchFiles}"
+                                // parallelStages["Batch-${i + 1}"] = {
+                                //     stage("Batch-${i + 1}") {
+                                //         steps {
+                                //             echo "Running Batch ${i + 1} with files:\n${batchFiles}"
+                                //             sh """
+                                //                 pnpm test:e2e --testPathPattern="${batchFiles}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=batch-${i + 1}-report.html"
+                                //             """
+                                //         }
+                                //     }
+                                // }
                             }
                             parallel parallelStages
                         }
@@ -71,16 +71,16 @@ pipeline {
             }
         }
 
-        stage("Generate Combined Report") {
-            steps {
-                script {
-                    echo "Generating combined Jest E2E report"
-                    sh """
-                        pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=combined-e2e-report.html"
-                    """
-                }
-            }
-        }
+        // stage("Generate Combined Report") {
+        //     steps {
+        //         script {
+        //             echo "Generating combined Jest E2E report"
+        //             sh """
+        //                 pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=combined-e2e-report.html"
+        //             """
+        //         }
+        //     }
+        // }
     }
 
     post {
