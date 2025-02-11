@@ -66,6 +66,17 @@ pipeline {
             }
         }
 
+        stage("Generate Combined Report") {
+            steps {
+                script {
+                    echo "Combining all Jest HTML reports into a single report."
+                    sh """
+                        pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html"
+                    """
+                }
+            }
+        }
+
 
     }
 
