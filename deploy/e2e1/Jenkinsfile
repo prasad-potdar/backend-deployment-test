@@ -71,6 +71,7 @@ pipeline {
                 script {
                     echo "Combining all Jest HTML reports into a single report."
                     sh """
+                        mkdir -p ${REPORT_DIR}
                         pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html"
                     """
                 }
