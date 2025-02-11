@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        NODEJS_HOME = tool 'NodeJS'
+        PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+        REPORT_DIR = "${WORKSPACE}/reports"
+    }
+
+    stages {
+        stage("Install Node and Dependencies") {
+            steps {
+                script {
+                    sh '''
+                        pnpm install
+                    '''
+                }
+            }
+        }
+
+        stage("Run Tests") {
+            steps {
+                script {
+                    echo "Running E2E tests"
+                    sh '''
+                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "Publishing Jest E2E Report"
+                publishHTML(target: [
+                    reportDir: "",
+                    reportFiles: 'jest_html_reporters.html',
+                    reportName: "E2E Report",
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: true,
+                    keepAll: true,
+                    escapeUnderscores: false,
+                ])
+            }
+        }
+
+        aborted {
+            echo "E2E Tests aborted."
+        }
+
+        success {
+            echo "E2E Tests completed successfully."
+        }
+
+        unstable {
+            echo "E2E Tests encountered issues but completed."
+        }
+
+        failure {
+            echo "E2E Tests failed! Please check the logs."
+        }
+    }
+}
