@@ -53,13 +53,11 @@ pipeline {
                         def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert space-separated paths to Jest-compatible pattern
 
                         parallelStages["Batch-${i + 1}"] = {
-                            stage("Batch-${i + 1}") {
-                                steps {
-                                    echo "Running Batch ${i + 1} with files:\n${batchFiles}"
-                                    sh """
-                                        pnpm test:e2e --testPathPattern="${batchFilesPattern}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html"
-                                    """
-                                }
+                            script {
+                                echo "Running Batch ${i + 1} with files:\n${batchFiles}"
+                                sh """
+                                    pnpm test:e2e --testPathPattern="${batchFilesPattern}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html"
+                                """
                             }
                         }
                     }
@@ -67,6 +65,7 @@ pipeline {
                 }
             }
         }
+
 
     }
 
