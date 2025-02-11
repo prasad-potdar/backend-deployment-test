@@ -87,15 +87,15 @@ pipeline {
         always {
             script {
                 echo "Publishing Jest E2E Report"
-                publishHTML(target: [
-                    reportDir: "${REPORT_DIR}",
-                    reportFiles: 'combined-e2e-report.html',
-                    reportName: "Combined E2E Report",
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: true,
-                    keepAll: true,
-                    escapeUnderscores: false,
-                ])
+                // publishHTML(target: [
+                //     reportDir: "${REPORT_DIR}",
+                //     reportFiles: 'combined-e2e-report.html',
+                //     reportName: "Combined E2E Report",
+                //     alwaysLinkToLastBuild: true,
+                //     allowMissing: true,
+                //     keepAll: true,
+                //     escapeUnderscores: false,
+                // ])
             }
         }
 
