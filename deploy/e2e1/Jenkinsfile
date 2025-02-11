@@ -27,7 +27,7 @@ pipeline {
                         returnStdout: true
                     ).trim().split("\n").findAll { it }
 
-                    int batchSize = 50
+                    int batchSize = 3
                     int batchCount = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
                     
                     echo "Total Test Files Found: ${testFiles.size()}"
