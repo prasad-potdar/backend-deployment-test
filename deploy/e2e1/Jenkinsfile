@@ -11,20 +11,63 @@ pipeline {
         stage("Install Node and Dependencies") {
             steps {
                 script {
-                    sh '''
-                        pnpm install
-                    '''
+                    sh 'pnpm install'
                 }
             }
         }
 
-        stage("Run Tests") {
+        stage("Prepare Test Batches") {
             steps {
                 script {
-                    echo "Running E2E tests"
-                    sh '''
-                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
-                    '''
+                    echo "Collecting all test files"
+
+                    // Get list of all test files dynamically
+                    def testFiles = sh(
+                        script: "find ${WORKSPACE}/test -name '*.e2e-spec.ts'",
+                        returnStdout: true
+                    ).trim().split("\n").findAll { it }
+
+                    int batchSize = 3
+                    int batchCount = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
+                    echo "Total test files: ${testFiles.size()}, Batch count: ${batchCount}"
+
+                    env.TEST_FILES_JSON = groovy.json.JsonOutput.toJson(testFiles)
+                    env.BATCH_SIZE = batchSize.toString()
+                }
+            }
+        }
+
+        stage("Run Test Batches") {
+            parallel {
+                script {
+                    def testFiles = readJSON text: env.TEST_FILES_JSON
+                    int batchSize = env.BATCH_SIZE.toInteger()
+
+                    def stages = [:]
+                    for (int i = 0; i < Math.ceil(testFiles.size() / batchSize); i++) {
+                        int start = i * batchSize
+                        int end = Math.min((i + 1) * batchSize, testFiles.size())
+                        def batchFiles = testFiles[start..<end].join(' ')
+
+                        stages["Batch-${i + 1}"] = {
+                            echo "Running Batch ${i + 1} with files: ${batchFiles}"
+                            sh """
+                                pnpm jest --testPathPattern="${batchFiles}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=batch-${i + 1}-report.html"
+                            """
+                        }
+                    }
+                    parallel stages
+                }
+            }
+        }
+
+        stage("Generate Combined Report") {
+            steps {
+                script {
+                    echo "Generating combined Jest E2E report"
+                    sh """
+                        pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR}, filename=combined-e2e-report.html"
+                    """
                 }
             }
         }
@@ -35,9 +78,9 @@ pipeline {
             script {
                 echo "Publishing Jest E2E Report"
                 publishHTML(target: [
-                    reportDir: "",
-                    reportFiles: 'jest_html_reporters.html',
-                    reportName: "E2E Report",
+                    reportDir: "${REPORT_DIR}",
+                    reportFiles: 'combined-e2e-report.html',
+                    reportName: "Combined E2E Report",
                     alwaysLinkToLastBuild: true,
                     allowMissing: true,
                     keepAll: true,
