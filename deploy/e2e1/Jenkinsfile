@@ -120,7 +120,6 @@ pipeline {
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
         TEMP_DIR = "${WORKSPACE}/jest_temp"  // Set a new Jest temp directory
-        export JEST_HTML_REPORTERS_OUTPUT_PATH = "${TEMP_DIR}"  // Explicitly tell Jest to use it
     }
 
     stages {
@@ -179,7 +178,9 @@ pipeline {
 
                                 sh """
                                     mkdir -p ${TEMP_DIR}/batch-${i + 1}  # Ensure temp directory exists
-                                    export JEST_HTML_REPORTERS_OUTPUT_PATH="${TEMP_DIR}/batch-${i + 1}"  # Unique temp dir per batch
+
+                                    # Set environment variable inside shell
+                                    JEST_HTML_REPORTERS_OUTPUT_PATH="${TEMP_DIR}/batch-${i + 1}" 
 
                                     pnpm test:e2e -- --testPathPattern="${batchFilesPattern}" \
                                     --reporters=jest-html-reporters \
@@ -192,6 +193,7 @@ pipeline {
                 }
             }
         }
+
 
         stage("Generate Combined Report") {
             steps {
