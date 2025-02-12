@@ -112,7 +112,6 @@
 //     }
 // }
 
-
 pipeline {
     agent any
 
@@ -120,6 +119,7 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
+        TEMP_DIR = "${WORKSPACE}/temp"  // Define a writable temp directory
     }
 
     stages {
@@ -155,7 +155,8 @@ pipeline {
         stage("Run Test Batches") {
             steps {
                 script {
-                    sh "mkdir -p ${REPORT_DIR}" // Ensure reports directory exists
+                    sh "mkdir -p ${REPORT_DIR}"  // Ensure reports directory exists
+                    sh "mkdir -p ${TEMP_DIR}"    // Ensure temp directory exists
 
                     def testFiles = env.TEST_FILES_CSV.split(',')
                     int batchSize = env.BATCH_SIZE.toInteger()
@@ -176,6 +177,8 @@ pipeline {
                                     pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
                                     --reporters=jest-html-reporters \
                                     --outputName=batch-${i + 1}-report.html \
+                                    --reportDir="${REPORT_DIR}" \
+                                    --tempDir="${TEMP_DIR}" \
                                     --detectOpenHandles
                                 """
                             }
@@ -193,6 +196,8 @@ pipeline {
                     sh """
                         pnpm jest --reporters=jest-html-reporters \
                         --outputName=combined-e2e-report.html \
+                        --reportDir="${REPORT_DIR}" \
+                        --tempDir="${TEMP_DIR}" \
                         --detectOpenHandles
                     """
                 }
