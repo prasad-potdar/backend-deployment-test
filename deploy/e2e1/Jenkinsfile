@@ -172,6 +172,7 @@ pipeline {
                         int end = Math.min((i + 1) * batchSize, testFiles.size())
                         def batchFiles = testFiles[start..<end].join(' ')
                         def batchReportDir = "${REPORT_DIR}/batch-${i + 1}"  // Unique report directory
+                        def batchJsonReport = "${batchReportDir}/jest-results.json"
 
                         parallelStages["Batch-${i + 1}"] = {
                             script {
@@ -180,7 +181,7 @@ pipeline {
                                sh """
                                     mkdir -p '${batchReportDir}'
                                     export JEST_REPORT_DIR='${batchReportDir}'
-                                    pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}'
+                                    pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
                                 """
 
                                  // Extract Test Summary
