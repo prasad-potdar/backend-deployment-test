@@ -182,6 +182,18 @@ pipeline {
                                     export JEST_REPORT_DIR='${batchReportDir}'
                                     pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}'
                                 """
+
+                                 // Extract Test Summary
+                                def testSummary = sh(
+                                    script: """
+                                        passed=\$(grep -o '"numPassedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
+                                        failed=\$(grep -o '"numFailedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
+                                        echo "✅ Passed: \${passed}, ❌ Failed: \${failed}"
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+
+                                echo testSummary
                             }
                         }
                     }
