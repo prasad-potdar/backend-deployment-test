@@ -16,14 +16,13 @@
     [
       "jest-html-reporters",
       {
-        "publicPath": "./",
-        "filename": "jest_html_reporters.html",
-        "openReport": false,
+        "publicPath": "./reports",
+        "filename": "jest-report.html",
         "expand": true,
-        "enableAttach": true,
-        "inlineSource": false
+        "enableAttach": true
       }
     ]
   ],
   "verbose": true
 }
+
