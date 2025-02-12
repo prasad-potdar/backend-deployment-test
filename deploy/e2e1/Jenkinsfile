@@ -178,13 +178,13 @@ pipeline {
                         parallelStages["Batch-${batchIndex}"] = {
                             script {
                                 echo "Running Batch ${batchIndex} with files: ${batchFiles}"
-                                def batchReportDir = "${REPORT_DIR}/batch-${batchIndex}" 
+                                def batchReportDir = "${REPORT_DIR}/batch-${batchIndex}"
                                 def testResult = sh(
                                     script: """
-                                        mkdir -p ${TEMP_DIR}/batch-${batchIndex}
+                                        mkdir -p ${batchReportDir}  // Ensure batch-specific directory exists
                                         pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
                                         --reporters=jest-html-reporters \
-                                        --reporterOptions="publicPath=${batchReportDir},filename=batch-${batchIndex}-report.html,expand=true"
+                                        --reporterOptions='{"publicPath":"${batchReportDir}","filename":"batch-${batchIndex}-report.html","expand":true}'
                                     """,
                                     returnStatus: true
                                 )
