@@ -158,8 +158,7 @@ pipeline {
         stage("Run Test Batches") {
             steps {
                 script {
-                    sh "mkdir -p ${REPORT_DIR} ${TEMP_DIR}"  // Ensure directories exist
-
+                    sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
                     def testFiles = env.TEST_FILES_CSV.split(',')
                     int batchSize = env.BATCH_SIZE.toInteger()
                     def parallelStages = [:]
@@ -167,41 +166,31 @@ pipeline {
                     int numBatches = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
 
                     echo "Running ${numBatches} batches of tests..."
-                    
+
                     for (int i = 0; i < numBatches; i++) {
-                        def batchIndex = i + 1  // Capture batch index to avoid closure scope issues
                         int start = i * batchSize
                         int end = Math.min((i + 1) * batchSize, testFiles.size())
                         def batchFiles = testFiles[start..<end].join(' ')
-                        def batchFilesPattern = batchFiles.replaceAll(' ', '|')
+                        def batchReportDir = "${REPORT_DIR}/batch-${i + 1}"  // Unique report directory
 
-                        parallelStages["Batch-${batchIndex}"] = {
+                        parallelStages["Batch-${i + 1}"] = {
                             script {
-                                echo "Running Batch ${batchIndex} with files: ${batchFiles}"
-                                def batchReportDir = "${REPORT_DIR}/batch-${batchIndex}"
-                                def testResult = sh(
-                                    script: """
-                                        mkdir -p ${batchReportDir}  // Ensure batch-specific directory exists
-                                        pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
-                                        --reporters=jest-html-reporters \
-                                        --reporterOptions='{"publicPath":"${batchReportDir}","filename":"batch-${batchIndex}-report.html","expand":true}'
-                                    """,
-                                    returnStatus: true
-                                )
+                                echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
-                                if (testResult != 0) {
-                                    echo "❌ Batch-${batchIndex} failed! Check logs."
-                                    error("E2E tests failed in Batch-${batchIndex}")
-                                }
+                                sh """
+                                    mkdir -p ${batchReportDir}
+                                    export JEST_REPORT_DIR="${batchReportDir}"  // Set environment variable
+                                    pnpm test:e2e --testPathPattern="${batchFiles.replaceAll(' ', '|')}"
+                                """
                             }
                         }
                     }
 
-                    
                     parallel parallelStages
                 }
             }
         }
+
 
         stage("Generate Combined Report") {
             steps {

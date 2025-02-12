@@ -1,4 +1,4 @@
-{
+module.exports = {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
@@ -16,11 +16,10 @@
     [
       "jest-html-reporters",
       {
-        "publicPath": "./reports",
-        "filename": "jest-report.html",
-        "expand": true,
-        "enableAttach": true
-      }
+        "publicPath": process.env.JEST_REPORT_DIR || "jest_reports",
+        "filename": "jest_report.html",
+        "expand": true
+      },
     ]
   ],
   "verbose": true
