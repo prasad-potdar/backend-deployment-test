@@ -155,8 +155,8 @@ pipeline {
         stage("Run Test Batches") {
             steps {
                 script {
-                    sh "mkdir -p ${REPORT_DIR}"  // Ensure reports directory exists
-                    sh "mkdir -p ${TEMP_DIR}"    // Ensure temp directory exists
+                    sh "mkdir -p ${REPORT_DIR}"  // Ensure the reports directory exists
+                    sh "mkdir -p ${TEMP_DIR}"    // Ensure the temp directory exists
 
                     def testFiles = env.TEST_FILES_CSV.split(',')
                     int batchSize = env.BATCH_SIZE.toInteger()
@@ -168,12 +168,13 @@ pipeline {
                         int start = i * batchSize
                         int end = Math.min((i + 1) * batchSize, testFiles.size())
                         def batchFiles = testFiles[start..<end].join(' ')
-                        def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert space-separated paths to Jest-compatible pattern
+                        def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert to Jest-compatible pattern
 
                         parallelStages["Batch-${i + 1}"] = {
                             script {
                                 echo "Running Batch ${i + 1} with files:\n${batchFiles}"
                                 sh """
+                                    mkdir -p ${TEMP_DIR}  # Ensure temp directory exists before each batch run
                                     pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
                                     --reporters=jest-html-reporters \
                                     --outputName=batch-${i + 1}-report.html \
@@ -192,6 +193,8 @@ pipeline {
         stage("Generate Combined Report") {
             steps {
                 script {
+                    sh "mkdir -p ${TEMP_DIR}"  // Ensure temp directory exists before Jest runs
+
                     echo "Combining all Jest HTML reports into a single report."
                     sh """
                         pnpm jest --reporters=jest-html-reporters \
@@ -234,3 +237,4 @@ pipeline {
         }
     }
 }
+
