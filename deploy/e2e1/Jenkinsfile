@@ -173,18 +173,22 @@ pipeline {
                         def batchFiles = testFiles[start..<end].join(' ')
                         def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert space-separated paths to Jest-compatible pattern
 
-                        echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
                         // Run tests with error handling
-                        def testResult = sh(
-                            script: """
-                                mkdir -p ${TEMP_DIR}/batch-${i + 1}
-                                pnpm test:e2e -- --testPathPattern="${batchFiles}" \
-                                --reporters=jest-html-reporters \
-                                --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
-                            """,
-                            returnStatus: true // Capture exit status instead of failing the pipeline
-                        )
+                        parallelStages["Batch-${i + 1}"] = {
+                            echo "Running Batch ${i + 1} with files: ${batchFiles}"
+                            script {
+                                def testResult = sh(
+                                    script: """
+                                        mkdir -p ${TEMP_DIR}/batch-${i + 1}
+                                        pnpm test:e2e -- --testPathPattern="${batchFiles}" \
+                                        --reporters=jest-html-reporters \
+                                        --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
+                                    """,
+                                    returnStatus: true // Capture exit status instead of failing the pipeline
+                                )
+                            }
+                        }
                     //     parallelStages["Batch-${i + 1}"] = {
                     //         script {
                     //             echo "Running Batch ${i + 1} with files: ${batchFiles}"
@@ -207,7 +211,7 @@ pipeline {
                     //         }
                     //     }
                     }
-                    // parallel parallelStages
+                    parallel parallelStages
                 }
             }
         }
