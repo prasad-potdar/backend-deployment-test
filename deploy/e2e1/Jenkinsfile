@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -5,6 +6,7 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
+        TEMP_DIR = "${WORKSPACE}/jest_temp"  // Set a new Jest temp directory
     }
 
     stages {
@@ -34,9 +36,8 @@ pipeline {
 
                     echo "Total Test Files: ${testFiles.size()}, Batches: ${batchCount}, Batch Size: ${batchSize}"
 
-                    script {
-                        testBatchData = [testFiles: testFiles, batchSize: batchSize]
-                    }
+                    env.TEST_FILES_CSV = testFiles.join(',')
+                    env.BATCH_SIZE = batchSize.toString()
                 }
             }
         }
@@ -45,15 +46,9 @@ pipeline {
             steps {
                 script {
                     sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
-
-                    def testFiles = testBatchData.testFiles
-                    int batchSize = testBatchData.batchSize
+                    def testFiles = env.TEST_FILES_CSV.split(',')
+                    int batchSize = env.BATCH_SIZE.toInteger()
                     def parallelStages = [:]
-
-                    // Initialize counts
-                    int totalTests = 0
-                    int totalPassed = 0
-                    int totalFailed = 0
 
                     int numBatches = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
 
@@ -76,43 +71,56 @@ pipeline {
                                     pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
                                 """
 
-                                // Extract Test Summary
-                                def batchResults = sh(
+                                 // Extract Test Summary
+                                def testSummary = sh(
                                     script: """
-                                        total=\$(grep -o '"numTotalTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
                                         passed=\$(grep -o '"numPassedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
                                         failed=\$(grep -o '"numFailedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
-                                        echo "\${total} \${passed} \${failed}"
+                                        echo "✅ Passed: \${passed}, ❌ Failed: \${failed}"
                                     """,
                                     returnStdout: true
-                                ).trim().split(' ')
+                                ).trim()
 
-                                synchronized (this) {
-                                    totalTests += batchResults[0].toInteger()
-                                    totalPassed += batchResults[1].toInteger()
-                                    totalFailed += batchResults[2].toInteger()
-                                }
+                                echo "testSummary**** ${testSummary}"
                             }
                         }
                     }
 
                     parallel parallelStages
-
-                    // Store final counts in script scope
-                    script {
-                        testSummary = [totalTests: totalTests, totalPassed: totalPassed, totalFailed: totalFailed]
-                    }
                 }
             }
         }
+
+
+        // stage("Generate Combined Report") {
+        //     steps {
+        //         script {
+        //             sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
+
+        //             echo "🔄 Merging all Jest HTML reports..."
+        //             sh """
+        //                 pnpm jest --reporters=jest-html-reporters \
+        //                 --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html,expand=true"
+        //             """
+        //         }
+        //     }
+        // }
     }
 
     post {
         always {
-            echo "📊 Test Execution Summary:"
-            echo "🔹 Total Tests: ${testSummary.totalTests}"
-            echo "✅ Passed: ${testSummary.totalPassed}"
-            echo "❌ Failed: ${testSummary.totalFailed}"
+            // script {
+            //     echo "📢 Publishing Jest E2E Report..."
+            //     publishHTML(target: [
+            //         reportDir: "${REPORT_DIR}",
+            //         reportFiles: '*.html',
+            //         reportName: "Jest E2E Reports",
+            //         alwaysLinkToLastBuild: true,
+            //         allowMissing: true,
+            //         keepAll: true,
+            //         escapeUnderscores: false
+            //     ])
+            // }
         }
 
         success {
