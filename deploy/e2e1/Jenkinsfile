@@ -119,7 +119,8 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
-        TEMP_DIR = "${WORKSPACE}/jest_html_reporters"  // Jest's temp directory
+        TEMP_DIR = "${WORKSPACE}/jest_temp"  // Set a new Jest temp directory
+        export JEST_HTML_REPORTERS_OUTPUT_PATH = "${TEMP_DIR}"  // Explicitly tell Jest to use it
     }
 
     stages {
@@ -177,10 +178,12 @@ pipeline {
                                 echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
                                 sh """
-                                    mkdir -p ${TEMP_DIR}  # Ensure temp directory exists
+                                    mkdir -p ${TEMP_DIR}/batch-${i + 1}  # Ensure temp directory exists
+                                    export JEST_HTML_REPORTERS_OUTPUT_PATH="${TEMP_DIR}/batch-${i + 1}"  # Unique temp dir per batch
+
                                     pnpm test:e2e -- --testPathPattern="${batchFilesPattern}" \
                                     --reporters=jest-html-reporters \
-                                    --reporterOptions="publicPath=${TEMP_DIR},filename=batch-${i + 1}-report.html,expand=true"
+                                    --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
                                 """
                             }
                         }
