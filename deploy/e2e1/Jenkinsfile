@@ -193,7 +193,7 @@ pipeline {
                                     returnStdout: true
                                 ).trim()
 
-                                echo testSummary
+                                echo "testSummary**** ${testSummary}"
                             }
                         }
                     }
