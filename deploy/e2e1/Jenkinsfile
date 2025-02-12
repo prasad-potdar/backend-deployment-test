@@ -109,6 +109,7 @@ pipeline {
 
     post {
         always {
+            echo "🧹 Cleaning up temporary files..."
             // script {
             //     echo "📢 Publishing Jest E2E Report..."
             //     publishHTML(target: [
