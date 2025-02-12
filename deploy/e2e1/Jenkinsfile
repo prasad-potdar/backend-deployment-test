@@ -169,31 +169,33 @@ pipeline {
                     echo "Running ${numBatches} batches of tests..."
                     
                     for (int i = 0; i < numBatches; i++) {
+                        def batchIndex = i + 1  // Capture batch index to avoid closure scope issues
                         int start = i * batchSize
                         int end = Math.min((i + 1) * batchSize, testFiles.size())
                         def batchFiles = testFiles[start..<end].join(' ')
-                        def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert space-separated paths to Jest-compatible pattern
+                        def batchFilesPattern = batchFiles.replaceAll(' ', '|')
 
-                        parallelStages["Batch-${i + 1}"] = {
+                        parallelStages["Batch-${batchIndex}"] = {
                             script {
-                                echo "Running Batch ${i + 1} with files: ${batchFiles}"
+                                echo "Running Batch ${batchIndex} with files: ${batchFiles}"
                                 def testResult = sh(
                                     script: """
-                                        mkdir -p ${TEMP_DIR}/batch-${i + 1}
+                                        mkdir -p ${TEMP_DIR}/batch-${batchIndex}
                                         pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
                                         --reporters=jest-html-reporters \
-                                        --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
+                                        --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${batchIndex}-report.html,expand=true"
                                     """,
-                                    returnStatus: true // Capture exit status instead of failing the pipeline
+                                    returnStatus: true
                                 )
 
                                 if (testResult != 0) {
-                                    echo "❌ Batch-${i + 1} failed! Check logs."
-                                    error("E2E tests failed in Batch-${i + 1}")
+                                    echo "❌ Batch-${batchIndex} failed! Check logs."
+                                    error("E2E tests failed in Batch-${batchIndex}")
                                 }
                             }
                         }
                     }
+
                     
                     parallel parallelStages
                 }
