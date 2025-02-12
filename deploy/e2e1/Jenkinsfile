@@ -177,10 +177,10 @@ pipeline {
                             script {
                                 echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
-                                sh """
-                                    mkdir -p ${batchReportDir}
-                                    export JEST_REPORT_DIR="${batchReportDir}"  // Set environment variable
-                                    pnpm test:e2e --testPathPattern="${batchFiles.replaceAll(' ', '|')}"
+                               sh """
+                                    mkdir -p '${batchReportDir}'
+                                    export JEST_REPORT_DIR='${batchReportDir}'
+                                    pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}'
                                 """
                             }
                         }
