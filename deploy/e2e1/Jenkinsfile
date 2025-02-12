@@ -34,8 +34,9 @@ pipeline {
 
                     echo "Total Test Files: ${testFiles.size()}, Batches: ${batchCount}, Batch Size: ${batchSize}"
 
-                    def testBatchData = [testFiles: testFiles, batchSize: batchSize]
-                    return testBatchData
+                    script {
+                        testBatchData = [testFiles: testFiles, batchSize: batchSize]
+                    }
                 }
             }
         }
@@ -45,7 +46,6 @@ pipeline {
                 script {
                     sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
 
-                    def testBatchData = prepareTestBatches()
                     def testFiles = testBatchData.testFiles
                     int batchSize = testBatchData.batchSize
                     def parallelStages = [:]
@@ -87,27 +87,34 @@ pipeline {
                                     returnStdout: true
                                 ).trim().split(' ')
 
-                                // Update counts
-                                totalTests += batchResults[0].toInteger()
-                                totalPassed += batchResults[1].toInteger()
-                                totalFailed += batchResults[2].toInteger()
+                                synchronized (this) {
+                                    totalTests += batchResults[0].toInteger()
+                                    totalPassed += batchResults[1].toInteger()
+                                    totalFailed += batchResults[2].toInteger()
+                                }
                             }
                         }
                     }
 
                     parallel parallelStages
 
-                    // Print final test summary
-                    echo "📊 Test Execution Summary:"
-                    echo "🔹 Total Tests: ${totalTests}"
-                    echo "✅ Passed: ${totalPassed}"
-                    echo "❌ Failed: ${totalFailed}"
+                    // Store final counts in script scope
+                    script {
+                        testSummary = [totalTests: totalTests, totalPassed: totalPassed, totalFailed: totalFailed]
+                    }
                 }
             }
         }
     }
 
     post {
+        always {
+            echo "📊 Test Execution Summary:"
+            echo "🔹 Total Tests: ${testSummary.totalTests}"
+            echo "✅ Passed: ${testSummary.totalPassed}"
+            echo "❌ Failed: ${testSummary.totalFailed}"
+        }
+
         success {
             echo "✅ E2E Tests completed successfully!"
         }
