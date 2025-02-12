@@ -1,3 +1,118 @@
+// pipeline {
+//     agent any
+
+//     environment {
+//         NODEJS_HOME = tool 'NodeJS'
+//         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+//         REPORT_DIR = "${WORKSPACE}/reports"
+//     }
+
+//     stages {
+//         stage("Install Node and Dependencies") {
+//             steps {
+//                 script {
+//                     sh 'pnpm install'
+//                 }
+//             }
+//         }
+
+//         stage("Prepare Test Batches") {
+//             steps {
+//                 script {
+//                     echo "Collecting all test files..."
+//                     def testFiles = sh(
+//                         script: "find ${WORKSPACE}/test -name '*.e2e-spec.ts'",
+//                         returnStdout: true
+//                     ).trim().split("\n").findAll { it }
+
+//                     int batchSize = 3
+//                     int batchCount = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
+
+//                     echo "Total Test Files Found: ${testFiles.size()}"
+//                     echo "Batch Size: ${batchSize}, Number of Batches: ${batchCount}"
+
+//                     env.TEST_FILES_CSV = testFiles.join(',')
+//                     env.BATCH_SIZE = batchSize.toString()
+//                 }
+//             }
+//         }
+
+//         stage("Run Test Batches") {
+//             steps {
+//                 script {
+//                     def testFiles = env.TEST_FILES_CSV.split(',')
+//                     int batchSize = env.BATCH_SIZE.toInteger()
+
+//                     def parallelStages = [:]
+//                     int numBatches = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
+
+//                     for (int i = 0; i < numBatches; i++) {
+//                         int start = i * batchSize
+//                         int end = Math.min((i + 1) * batchSize, testFiles.size())
+//                         def batchFiles = testFiles[start..<end].join(' ')
+//                         def batchFilesPattern = batchFiles.replaceAll(' ', '|') // Convert space-separated paths to Jest-compatible pattern
+
+//                         parallelStages["Batch-${i + 1}"] = {
+//                             script {
+//                                 echo "Running Batch ${i + 1} with files:\n${batchFiles}"
+//                                 sh """
+//                                     pnpm test:e2e --testPathPattern="${batchFilesPattern}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html"
+//                                 """
+//                             }
+//                         }
+//                     }
+//                     parallel parallelStages
+//                 }
+//             }
+//         }
+
+//         stage("Generate Combined Report") {
+//             steps {
+//                 script {
+//                     echo "Combining all Jest HTML reports into a single report."
+//                     sh """
+//                         mkdir -p ${REPORT_DIR}
+//                         pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html"
+//                     """
+//                 }
+//             }
+//         }
+
+
+//     }
+
+//     post {
+//         always {
+//             script {
+//                 echo "Publishing Jest E2E Report"
+//                 // Uncomment the report publishing once Jest reports are ready
+//                 publishHTML(target: [
+//                     reportDir: "${REPORT_DIR}",
+//                     reportFiles: '*.html',
+//                     reportName: "Jest E2E Reports",
+//                     alwaysLinkToLastBuild: true,
+//                     allowMissing: true,
+//                     keepAll: true,
+//                     escapeUnderscores: false,
+//                 ])
+//             }
+//         }
+
+//         success {
+//             echo "E2E Tests completed successfully."
+//         }
+
+//         unstable {
+//             echo "E2E Tests encountered issues but completed."
+//         }
+
+//         failure {
+//             echo "E2E Tests failed! Please check the logs."
+//         }
+//     }
+// }
+
+
 pipeline {
     agent any
 
@@ -40,6 +155,8 @@ pipeline {
         stage("Run Test Batches") {
             steps {
                 script {
+                    sh "mkdir -p ${REPORT_DIR}" // Ensure reports directory exists
+
                     def testFiles = env.TEST_FILES_CSV.split(',')
                     int batchSize = env.BATCH_SIZE.toInteger()
 
@@ -56,7 +173,10 @@ pipeline {
                             script {
                                 echo "Running Batch ${i + 1} with files:\n${batchFiles}"
                                 sh """
-                                    pnpm test:e2e --testPathPattern="${batchFilesPattern}" --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html"
+                                    pnpm test:e2e --testPathPattern="${batchFilesPattern}" \
+                                    --reporters=jest-html-reporters \
+                                    --outputName=batch-${i + 1}-report.html \
+                                    --detectOpenHandles
                                 """
                             }
                         }
@@ -71,21 +191,19 @@ pipeline {
                 script {
                     echo "Combining all Jest HTML reports into a single report."
                     sh """
-                        mkdir -p ${REPORT_DIR}
-                        pnpm jest --reporters=jest-html-reporters --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html"
+                        pnpm jest --reporters=jest-html-reporters \
+                        --outputName=combined-e2e-report.html \
+                        --detectOpenHandles
                     """
                 }
             }
         }
-
-
     }
 
     post {
         always {
             script {
                 echo "Publishing Jest E2E Report"
-                // Uncomment the report publishing once Jest reports are ready
                 publishHTML(target: [
                     reportDir: "${REPORT_DIR}",
                     reportFiles: '*.html',
@@ -93,7 +211,7 @@ pipeline {
                     alwaysLinkToLastBuild: true,
                     allowMissing: true,
                     keepAll: true,
-                    escapeUnderscores: false,
+                    escapeUnderscores: false
                 ])
             }
         }
