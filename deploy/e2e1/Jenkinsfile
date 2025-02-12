@@ -169,23 +169,27 @@ pipeline {
                     for (int i = 0; i < numBatches; i++) {
                         int start = i * batchSize
                         int end = Math.min((i + 1) * batchSize, testFiles.size())
-                        def batchFiles = testFiles[start..<end]
-                        def batchFilesPattern = batchFiles.collect { it.replaceAll('\\s+', '\\\\ ') }.join('|')
+                        def batchFiles = testFiles[start..<end].join(' ')
 
                         parallelStages["Batch-${i + 1}"] = {
                             script {
                                 echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
-                                sh """
-                                    mkdir -p ${TEMP_DIR}/batch-${i + 1}  # Ensure temp directory exists
+                                // Run tests with error handling
+                                def testResult = sh(
+                                    script: """
+                                        mkdir -p ${TEMP_DIR}/batch-${i + 1}
+                                        pnpm test:e2e -- --testPathPattern="${batchFiles}" \
+                                        --reporters=jest-html-reporters \
+                                        --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
+                                    """,
+                                    returnStatus: true // Capture exit status instead of failing the pipeline
+                                )
 
-                                    # Set environment variable inside shell
-                                    JEST_HTML_REPORTERS_OUTPUT_PATH="${TEMP_DIR}/batch-${i + 1}" 
-
-                                    pnpm test:e2e -- --testPathPattern="${batchFilesPattern}" \
-                                    --reporters=jest-html-reporters \
-                                    --reporterOptions="publicPath=${REPORT_DIR},filename=batch-${i + 1}-report.html,expand=true"
-                                """
+                                if (testResult != 0) {
+                                    echo "❌ Batch-${i + 1} failed! Check logs."
+                                    error("E2E tests failed in Batch-${i + 1}")
+                                }
                             }
                         }
                     }
