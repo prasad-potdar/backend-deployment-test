@@ -81,7 +81,7 @@ pipeline {
         always {
             script {
                 sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'"
-                // archiveArtifacts artifacts: 'reports/**', fingerprint: true
+                archiveArtifacts artifacts: 'reports/**', fingerprint: true
                 
                 def jenkinsBaseUrl = env.BUILD_URL
                 int totalPassed = 0, totalFailed = 0, totalPending = 0
