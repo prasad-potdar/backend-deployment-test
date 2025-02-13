@@ -100,8 +100,9 @@ pipeline {
                 int totalFailed = 0
 
                 for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
-                    totalPassed += (env["PASSED_${i}"] ?: "0").toInteger()
-                    totalFailed += (env["FAILED_${i}"] ?: "0").toInteger()
+                    // Use dot notation instead of env["VAR_NAME"]
+                    totalPassed += (env."PASSED_${i}" ?: "0").toInteger()
+                    totalFailed += (env."FAILED_${i}" ?: "0").toInteger()
                 }
 
                 echo "✅ Total Passed: ${totalPassed}, ❌ Total Failed: ${totalFailed}"
