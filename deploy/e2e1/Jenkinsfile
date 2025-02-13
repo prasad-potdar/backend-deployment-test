@@ -5,7 +5,6 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
-        TEMP_DIR = "${WORKSPACE}/jest_temp"  // Set a new Jest temp directory
     }
 
     stages {
@@ -69,20 +68,6 @@ pipeline {
                                     export JEST_REPORT_DIR='${batchReportDir}'
                                     pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
                                 """
-
-                                // Extract Test Summary
-                                def testSummary = sh(
-                                    script: """
-                                        passed=\$(grep -o '"numPassedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
-                                        failed=\$(grep -o '"numFailedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
-                                        echo "✅ Passed: \${passed}, ❌ Failed: \${failed}"
-                                        echo "PASSED_\${i+1}=\${passed}" >> env_vars.sh
-                                        echo "FAILED_\${i+1}=\${failed}" >> env_vars.sh
-                                    """,
-                                    returnStdout: true
-                                ).trim()
-
-                                echo "testSummary**** ${testSummary}"
                             }
                         }
                     }
@@ -93,77 +78,6 @@ pipeline {
         }
     }
 
-    // post {
-    //     always {
-    //         script {
-    //             sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
-
-    //             // Archive artifacts
-    //             archiveArtifacts artifacts: 'reports/**', fingerprint: true
-
-    //             // Jenkins Base URL
-    //             def jenkinsBaseUrl = env.BUILD_URL // Gets the current build URL
-
-    //             int totalPassed = 0
-    //             int totalFailed = 0
-    //             int totalPending = 0
-    //             int totalTestSuites = 0
-    //             int totalPassedTestSuites = 0
-
-    //             // Generate report URLs dynamically
-    //             def numBatches = env.BATCH_SIZE.toInteger()
-    //             for (int i = 1; i <= numBatches; i++) {
-    //                 def reportPath = "reports/batch-${i}/jest_report.html"
-    //                 publishHTML([
-    //                     reportName: "E2E Test Report - Batch ${i}",
-    //                     reportDir: "reports/batch-${i}",
-    //                     reportFiles: 'jest_report.html',
-    //                     alwaysLinkToLastBuild: true,
-    //                     keepAll: true
-    //                 ])
-
-    //                 // Print report URL in console
-    //                 echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
-
-    //                 def batchJsonReport = "${REPORT_DIR}/batch-${i}/jest-results.json"
-
-    //                 if (fileExists(batchJsonReport)) {
-    //                     echo "📂 Processing report: ${batchJsonReport}"
-    //                     def jsonContent = readJSON text: readFile(batchJsonReport)
-
-    //                     echo "JSON Content***: ${jsonContent}"
-    //                     // def jsonContent = readJSON file: batchJsonReport
-
-    //                     totalPassed += jsonContent.numPassedTests
-    //                     totalFailed += jsonContent.numFailedTests
-    //                     totalPending += jsonContent.numPendingTests
-    //                     totalTestSuites += jsonContent.numTotalTestSuites
-    //                     totalPassedTestSuites += jsonContent.numPassedTestSuites
-    //                 } else {
-    //                     echo "⚠️ Warning: Report file not found for Batch ${i}"
-    //                 }
-    //             }
-
-    //             echo "✅ Total Passed: ${totalPassed}"
-    //             echo "❌ Total Failed: ${totalFailed}"
-    //             echo "⏳ Total Pending: ${totalPending}"
-    //             echo "🗂️ Total Test Suites: ${totalTestSuites}"
-    //             echo " Total Passed Test Suites: ${totalPassedTestSuites}"
-    //         }
-    //     }
-
-    //     success {
-    //         echo "✅ E2E Tests completed successfully!"
-    //     }
-
-    //     unstable {
-    //         echo "⚠️ E2E Tests encountered issues but completed."
-    //     }
-
-    //     failure {
-    //         echo "❌ E2E Tests failed! Check logs."
-    //     }
-    // }
 
     post {
     always {
