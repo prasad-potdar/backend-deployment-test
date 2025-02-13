@@ -5,26 +5,73 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
+        BATCH_SIZE = "5"
     }
 
     stages {
-        stage("Install Node and Dependencies") {
+        stage("Install Dependencies") {
             steps {
                 script {
-                    sh '''
-                        pnpm install
-                    '''
+                    sh 'pnpm install --frozen-lockfile'
                 }
             }
         }
 
-        stage("Run Tests") {
+        stage("Prepare Test Batches") {
             steps {
                 script {
-                    echo "Running E2E tests"
-                    sh '''
-                        pnpm test:e2e --json --unhandled-rejections=strict --outputFile='e2e-test-results.json'
-                    '''
+                    echo "Collecting all test files..."
+                    def testFiles = sh(
+                        script: "find ${WORKSPACE}/test -name '*.e2e-spec.ts'",
+                        returnStdout: true
+                    ).trim().split("\n").findAll { it }
+
+                    if (testFiles.isEmpty()) {
+                        error "❌ No E2E test files found!"
+                    }
+
+                    int batchSize = env.BATCH_SIZE.toInteger()
+                    int numBatches = (testFiles.size() + batchSize - 1) / batchSize
+
+                    echo "Total Test Files: ${testFiles.size()}, Batches: ${numBatches}, Batch Size: ${batchSize}"
+                    
+                    env.TEST_FILES_CSV = testFiles.join(',')
+                    env.NUM_BATCHES = numBatches.toString()
+                }
+            }
+        }
+
+        stage("Run Test Batches") {
+            steps {
+                script {
+                    sh "mkdir -p ${REPORT_DIR}"
+                    def testFiles = env.TEST_FILES_CSV.split(',')
+                    int batchSize = env.BATCH_SIZE.toInteger()
+                    int numBatches = env.NUM_BATCHES.toInteger()
+                    def parallelStages = [:]
+
+                    echo "Running ${numBatches} batches of tests..."
+
+                    for (int i = 0; i < numBatches; i++) {
+                        int start = i * batchSize
+                        int end = Math.min(start + batchSize, testFiles.size())
+                        def batchFiles = testFiles[start..<end].join(' ')
+                        def batchReportDir = "${REPORT_DIR}/batch-${i + 1}"
+                        def batchJsonReport = "${batchReportDir}/jest-results.json"
+
+                        parallelStages["Batch-${i + 1}"] = {
+                            script {
+                                echo "Running Batch ${i + 1} with files: ${batchFiles}"
+                                sh """
+                                    mkdir -p '${batchReportDir}'
+                                    export JEST_REPORT_DIR='${batchReportDir}'
+                                    pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
+                                """
+                            }
+                        }
+                    }
+
+                    parallel parallelStages
                 }
             }
         }
@@ -33,33 +80,64 @@ pipeline {
     post {
         always {
             script {
-                echo "Publishing Jest E2E Report"
-                publishHTML(target: [
-                    reportDir: "",
-                    reportFiles: 'jest_html_reporters.html',
-                    reportName: "E2E Report",
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: true,
-                    keepAll: true,
-                    escapeUnderscores: false,
-                ])
+                sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'"
+                archiveArtifacts artifacts: 'reports/**', fingerprint: true
+                
+                def jenkinsBaseUrl = env.BUILD_URL
+                int totalPassed = 0, totalFailed = 0, totalPending = 0
+                int totalTestSuites = 0, totalPassedTestSuites = 0, totalFailedTestSuites = 0, totalRuntimeErrors = 0, totalTestFiles = 0
+                int numBatches = env.NUM_BATCHES.toInteger()
+
+                for (int i = 1; i <= numBatches; i++) {
+                    def reportPath = "reports/batch-${i}/jest_report.html"
+                    publishHTML([
+                        reportName: "E2E Test Report - Batch ${i}",
+                        reportDir: "reports/batch-${i}",
+                        reportFiles: 'jest_report.html',
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true
+                    ])
+                    echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
+
+                    def batchJsonReport = "${REPORT_DIR}/batch-${i}/jest-results.json"
+                    if (fileExists(batchJsonReport)) {
+                        echo "📂 Processing report: ${batchJsonReport}"
+                        def jsonContent = readJSON text: readFile(batchJsonReport)
+                        totalPassed += jsonContent.numPassedTests
+                        totalFailed += jsonContent.numFailedTests
+                        totalPending += jsonContent.numPendingTests
+                        totalTestSuites += jsonContent.numTotalTestSuites
+                        totalPassedTestSuites += jsonContent.numPassedTestSuites
+                        totalFailedTestSuites += jsonContent.numFailedTestSuites
+                        totalRuntimeErrors += jsonContent.numRuntimeErrorTestSuites
+                        totalTestFiles += jsonContent.testResults.size()
+                    } else {
+                        echo "⚠️ Warning: Report file not found for Batch ${i}"
+                    }
+                }
+
+                echo "📊 **E2E Test Summary**"
+                echo "✅ Total Passed Tests: ${totalPassed}"
+                echo "❌ Total Failed Tests: ${totalFailed}"
+                echo "⏳ Total Pending Tests: ${totalPending}"
+                echo "🗂️ Total Test Suites: ${totalTestSuites}"
+                echo "🟢 Passed Test Suites: ${totalPassedTestSuites}"
+                echo "🔴 Failed Test Suites: ${totalFailedTestSuites}"
+                echo "💥 Runtime Errors: ${totalRuntimeErrors}"
+                echo "📂 Total Test Files Executed: ${totalTestFiles}"
             }
         }
 
-        aborted {
-            echo "E2E Tests aborted."
-        }
-
         success {
-            echo "E2E Tests completed successfully."
+            echo "✅ E2E Tests completed successfully!"
         }
 
         unstable {
-            echo "E2E Tests encountered issues but completed."
+            echo "⚠️ E2E Tests encountered issues but completed."
         }
 
         failure {
-            echo "E2E Tests failed! Please check the logs."
+            echo "❌ E2E Tests failed! Check logs."
         }
     }
 }
