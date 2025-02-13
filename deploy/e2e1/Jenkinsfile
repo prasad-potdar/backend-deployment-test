@@ -133,10 +133,10 @@ pipeline {
                         echo "JSON Content***: ${jsonContent}"
                         // def jsonContent = readJSON file: batchJsonReport
 
-                        // totalPassed += jsonContent.numPassedTests
-                        // totalFailed += jsonContent.numFailedTests
-                        // totalPending += jsonContent.numPendingTests
-                        // totalSuites += jsonContent.numTotalTestSuites
+                        totalPassed += jsonContent.numPassedTests
+                        totalFailed += jsonContent.numFailedTests
+                        totalPending += jsonContent.numPendingTests
+                        totalSuites += jsonContent.numTotalTestSuites
                     } else {
                         echo "⚠️ Warning: Report file not found for Batch ${i}"
                     }
