@@ -93,72 +93,161 @@ pipeline {
         }
     }
 
+    // post {
+    //     always {
+    //         script {
+    //             sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
+
+    //             // Archive artifacts
+    //             archiveArtifacts artifacts: 'reports/**', fingerprint: true
+
+    //             // Jenkins Base URL
+    //             def jenkinsBaseUrl = env.BUILD_URL // Gets the current build URL
+
+    //             int totalPassed = 0
+    //             int totalFailed = 0
+    //             int totalPending = 0
+    //             int totalTestSuites = 0
+    //             int totalPassedTestSuites = 0
+
+    //             // Generate report URLs dynamically
+    //             def numBatches = env.BATCH_SIZE.toInteger()
+    //             for (int i = 1; i <= numBatches; i++) {
+    //                 def reportPath = "reports/batch-${i}/jest_report.html"
+    //                 publishHTML([
+    //                     reportName: "E2E Test Report - Batch ${i}",
+    //                     reportDir: "reports/batch-${i}",
+    //                     reportFiles: 'jest_report.html',
+    //                     alwaysLinkToLastBuild: true,
+    //                     keepAll: true
+    //                 ])
+
+    //                 // Print report URL in console
+    //                 echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
+
+    //                 def batchJsonReport = "${REPORT_DIR}/batch-${i}/jest-results.json"
+
+    //                 if (fileExists(batchJsonReport)) {
+    //                     echo "📂 Processing report: ${batchJsonReport}"
+    //                     def jsonContent = readJSON text: readFile(batchJsonReport)
+
+    //                     echo "JSON Content***: ${jsonContent}"
+    //                     // def jsonContent = readJSON file: batchJsonReport
+
+    //                     totalPassed += jsonContent.numPassedTests
+    //                     totalFailed += jsonContent.numFailedTests
+    //                     totalPending += jsonContent.numPendingTests
+    //                     totalTestSuites += jsonContent.numTotalTestSuites
+    //                     totalPassedTestSuites += jsonContent.numPassedTestSuites
+    //                 } else {
+    //                     echo "⚠️ Warning: Report file not found for Batch ${i}"
+    //                 }
+    //             }
+
+    //             echo "✅ Total Passed: ${totalPassed}"
+    //             echo "❌ Total Failed: ${totalFailed}"
+    //             echo "⏳ Total Pending: ${totalPending}"
+    //             echo "🗂️ Total Test Suites: ${totalTestSuites}"
+    //             echo " Total Passed Test Suites: ${totalPassedTestSuites}"
+    //         }
+    //     }
+
+    //     success {
+    //         echo "✅ E2E Tests completed successfully!"
+    //     }
+
+    //     unstable {
+    //         echo "⚠️ E2E Tests encountered issues but completed."
+    //     }
+
+    //     failure {
+    //         echo "❌ E2E Tests failed! Check logs."
+    //     }
+    // }
+
     post {
-        always {
-            script {
-                sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
+    always {
+        script {
+            sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
 
-                // Archive artifacts
-                archiveArtifacts artifacts: 'reports/**', fingerprint: true
+            // Archive artifacts
+            archiveArtifacts artifacts: 'reports/**', fingerprint: true
 
-                // Jenkins Base URL
-                def jenkinsBaseUrl = env.BUILD_URL // Gets the current build URL
+            // Jenkins Base URL
+            def jenkinsBaseUrl = env.BUILD_URL // Gets the current build URL
 
-                int totalPassed = 0
-                int totalFailed = 0
-                int totalPending = 0
-                int totalSuites = 0
+            // Initialize test counters
+            int totalPassed = 0
+            int totalFailed = 0
+            int totalPending = 0
+            int totalTestSuites = 0
+            int totalPassedTestSuites = 0
+            int totalFailedTestSuites = 0
+            int totalRuntimeErrors = 0
+            int totalTestFiles = 0 // Count of test files executed
 
-                // Generate report URLs dynamically
-                def numBatches = env.BATCH_SIZE.toInteger()
-                for (int i = 1; i <= numBatches; i++) {
-                    def reportPath = "reports/batch-${i}/jest_report.html"
-                    publishHTML([
-                        reportName: "E2E Test Report - Batch ${i}",
-                        reportDir: "reports/batch-${i}",
-                        reportFiles: 'jest_report.html',
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true
-                    ])
+            // Get batch count from environment
+            def numBatches = env.BATCH_SIZE.toInteger()
+            for (int i = 1; i <= numBatches; i++) {
+                def reportPath = "reports/batch-${i}/jest_report.html"
+                
+                // Publish HTML report
+                publishHTML([
+                    reportName: "E2E Test Report - Batch ${i}",
+                    reportDir: "reports/batch-${i}",
+                    reportFiles: 'jest_report.html',
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true
+                ])
 
-                    // Print report URL in console
-                    echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
+                // Print report URL in console
+                echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
 
-                    def batchJsonReport = "${REPORT_DIR}/batch-${i}/jest-results.json"
+                // JSON report path
+                def batchJsonReport = "${REPORT_DIR}/batch-${i}/jest-results.json"
 
-                    if (fileExists(batchJsonReport)) {
-                        echo "📂 Processing report: ${batchJsonReport}"
-                        def jsonContent = readJSON text: readFile(batchJsonReport)
+                if (fileExists(batchJsonReport)) {
+                    echo "📂 Processing report: ${batchJsonReport}"
 
-                        echo "JSON Content***: ${jsonContent}"
-                        // def jsonContent = readJSON file: batchJsonReport
+                    def jsonContent = readJSON text: readFile(batchJsonReport)
 
-                        totalPassed += jsonContent.numPassedTests
-                        totalFailed += jsonContent.numFailedTests
-                        totalPending += jsonContent.numPendingTests
-                        totalSuites += jsonContent.numTotalTestSuites
-                    } else {
-                        echo "⚠️ Warning: Report file not found for Batch ${i}"
-                    }
+                    // Accumulate test metrics
+                    totalPassed += jsonContent.numPassedTests
+                    totalFailed += jsonContent.numFailedTests
+                    totalPending += jsonContent.numPendingTests
+                    totalTestSuites += jsonContent.numTotalTestSuites
+                    totalPassedTestSuites += jsonContent.numPassedTestSuites
+                    totalFailedTestSuites += jsonContent.numFailedTestSuites
+                    totalRuntimeErrors += jsonContent.numRuntimeErrorTestSuites
+                    totalTestFiles += jsonContent.testResults.size()
+                } else {
+                    echo "⚠️ Warning: Report file not found for Batch ${i}"
                 }
-
-                echo "✅ Total Passed: ${totalPassed}"
-                echo "❌ Total Failed: ${totalFailed}"
-                echo "⏳ Total Pending: ${totalPending}"
-                echo "🗂️ Total Test Suites: ${totalSuites}"
             }
-        }
 
-        success {
-            echo "✅ E2E Tests completed successfully!"
-        }
-
-        unstable {
-            echo "⚠️ E2E Tests encountered issues but completed."
-        }
-
-        failure {
-            echo "❌ E2E Tests failed! Check logs."
+            // Print summary results
+            echo "📊 **E2E Test Summary**"
+            echo "✅ Total Passed Tests: ${totalPassed}"
+            echo "❌ Total Failed Tests: ${totalFailed}"
+            echo "⏳ Total Pending Tests: ${totalPending}"
+            echo "🗂️ Total Test Suites: ${totalTestSuites}"
+            echo "🟢 Passed Test Suites: ${totalPassedTestSuites}"
+            echo "🔴 Failed Test Suites: ${totalFailedTestSuites}"
+            echo "💥 Runtime Errors: ${totalRuntimeErrors}"
+            echo "📂 Total Test Files Executed: ${totalTestFiles}"
         }
     }
+
+    success {
+        echo "✅ E2E Tests completed successfully!"
+    }
+
+    unstable {
+        echo "⚠️ E2E Tests encountered issues but completed."
+    }
+
+    failure {
+        echo "❌ E2E Tests failed! Check logs."
+    }
+}
 }
