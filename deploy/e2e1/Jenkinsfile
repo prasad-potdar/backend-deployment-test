@@ -105,11 +105,18 @@ pipeline {
                     totalFailed += (env."FAILED_${i}" ?: "0").toInteger()
                 }
 
+                
                 echo "✅ Total Passed: ${totalPassed}, ❌ Total Failed: ${totalFailed}"
+
+                archiveArtifacts artifacts: 'reports/**/*.json', fingerprint: true
+                def baseUrl = "${JENKINS_URL ?: env.BUILD_URL}"
                 echo "📢 Reports Available at:"
+                
+               
                 for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
-                    echo "🔗 Batch-${i} Report: ${env.BUILD_URL}artifact/reports/batch-${i}/jest-results.json"
+                    echo "🔗 Batch-${i} Report: ${baseUrl}artifact/reports/batch-${i}/jest-results.json"
                 }
+
             }
         }
 
