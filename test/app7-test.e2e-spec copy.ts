@@ -3,11 +3,11 @@ describe('App', () => {
         expect(true).toBe(true);
     });
 
-    it('should display welcome message', () => {
+    it('should display welcome message 1', () => {
         expect(true).toBe(true);
     });
 
-    it('should display welcome message', () => {
+    it('should display welcome message 2', () => {
         expect(true).toBe(true);
     });
 });
