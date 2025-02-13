@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -65,18 +64,20 @@ pipeline {
                             script {
                                 echo "Running Batch ${i + 1} with files: ${batchFiles}"
 
-                               sh """
+                                sh """
                                     mkdir -p '${batchReportDir}'
                                     export JEST_REPORT_DIR='${batchReportDir}'
                                     pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
                                 """
 
-                                 // Extract Test Summary
+                                // Extract Test Summary
                                 def testSummary = sh(
                                     script: """
                                         passed=\$(grep -o '"numPassedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
                                         failed=\$(grep -o '"numFailedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
                                         echo "✅ Passed: \${passed}, ❌ Failed: \${failed}"
+                                        echo "PASSED_\${i+1}=\${passed}" >> env_vars.sh
+                                        echo "FAILED_\${i+1}=\${failed}" >> env_vars.sh
                                     """,
                                     returnStdout: true
                                 ).trim()
@@ -90,38 +91,25 @@ pipeline {
                 }
             }
         }
-
-
-        // stage("Generate Combined Report") {
-        //     steps {
-        //         script {
-        //             sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
-
-        //             echo "🔄 Merging all Jest HTML reports..."
-        //             sh """
-        //                 pnpm jest --reporters=jest-html-reporters \
-        //                 --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html,expand=true"
-        //             """
-        //         }
-        //     }
-        // }
     }
 
     post {
         always {
-            echo "🧹 Cleaning up temporary files..."
-            // script {
-            //     echo "📢 Publishing Jest E2E Report..."
-            //     publishHTML(target: [
-            //         reportDir: "${REPORT_DIR}",
-            //         reportFiles: '*.html',
-            //         reportName: "Jest E2E Reports",
-            //         alwaysLinkToLastBuild: true,
-            //         allowMissing: true,
-            //         keepAll: true,
-            //         escapeUnderscores: false
-            //     ])
-            // }
+            script {
+                int totalPassed = 0
+                int totalFailed = 0
+
+                for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
+                    totalPassed += (env["PASSED_${i}"] ?: "0").toInteger()
+                    totalFailed += (env["FAILED_${i}"] ?: "0").toInteger()
+                }
+
+                echo "✅ Total Passed: ${totalPassed}, ❌ Total Failed: ${totalFailed}"
+                echo "📢 Reports Available at:"
+                for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
+                    echo "🔗 Batch-${i} Report: ${env.BUILD_URL}artifact/reports/batch-${i}/jest-results.json"
+                }
+            }
         }
 
         success {

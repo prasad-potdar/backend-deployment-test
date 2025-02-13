@@ -251,3 +251,142 @@ pipeline {
 }
 
 
+
+pipeline {
+    agent any
+
+    environment {
+        NODEJS_HOME = tool 'NodeJS'
+        PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+        REPORT_DIR = "${WORKSPACE}/reports"
+        TEMP_DIR = "${WORKSPACE}/jest_temp"  // Set a new Jest temp directory
+    }
+
+    stages {
+        stage("Install Node and Dependencies") {
+            steps {
+                script {
+                    sh 'pnpm install'
+                }
+            }
+        }
+
+        stage("Prepare Test Batches") {
+            steps {
+                script {
+                    echo "Collecting all test files..."
+                    def testFiles = sh(
+                        script: "find ${WORKSPACE}/test -name '*.e2e-spec.ts'",
+                        returnStdout: true
+                    ).trim().split("\n").findAll { it }
+
+                    if (testFiles.isEmpty()) {
+                        error "❌ No E2E test files found!"
+                    }
+
+                    int batchSize = 3
+                    int batchCount = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
+
+                    echo "Total Test Files: ${testFiles.size()}, Batches: ${batchCount}, Batch Size: ${batchSize}"
+
+                    env.TEST_FILES_CSV = testFiles.join(',')
+                    env.BATCH_SIZE = batchSize.toString()
+                }
+            }
+        }
+
+        stage("Run Test Batches") {
+            steps {
+                script {
+                    sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
+                    def testFiles = env.TEST_FILES_CSV.split(',')
+                    int batchSize = env.BATCH_SIZE.toInteger()
+                    def parallelStages = [:]
+
+                    int numBatches = (testFiles.size() / batchSize) + ((testFiles.size() % batchSize) > 0 ? 1 : 0)
+
+                    echo "Running ${numBatches} batches of tests..."
+
+                    for (int i = 0; i < numBatches; i++) {
+                        int start = i * batchSize
+                        int end = Math.min((i + 1) * batchSize, testFiles.size())
+                        def batchFiles = testFiles[start..<end].join(' ')
+                        def batchReportDir = "${REPORT_DIR}/batch-${i + 1}"  // Unique report directory
+                        def batchJsonReport = "${batchReportDir}/jest-results.json"
+
+                        parallelStages["Batch-${i + 1}"] = {
+                            script {
+                                echo "Running Batch ${i + 1} with files: ${batchFiles}"
+
+                               sh """
+                                    mkdir -p '${batchReportDir}'
+                                    export JEST_REPORT_DIR='${batchReportDir}'
+                                    pnpm test:e2e --testPathPattern='${batchFiles.replaceAll(' ', '|')}' --json --outputFile='${batchJsonReport}'
+                                """
+
+                                 // Extract Test Summary
+                                def testSummary = sh(
+                                    script: """
+                                        passed=\$(grep -o '"numPassedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
+                                        failed=\$(grep -o '"numFailedTests":[0-9]*' '${batchJsonReport}' | awk -F ':' '{print \$2}')
+                                        echo "✅ Passed: \${passed}, ❌ Failed: \${failed}"
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+
+                                echo "testSummary**** ${testSummary}"
+                            }
+                        }
+                    }
+
+                    parallel parallelStages
+                }
+            }
+        }
+
+
+        // stage("Generate Combined Report") {
+        //     steps {
+        //         script {
+        //             sh "mkdir -p ${REPORT_DIR}"  // Ensure report directory exists
+
+        //             echo "🔄 Merging all Jest HTML reports..."
+        //             sh """
+        //                 pnpm jest --reporters=jest-html-reporters \
+        //                 --reporterOptions="publicPath=${REPORT_DIR},filename=combined-e2e-report.html,expand=true"
+        //             """
+        //         }
+        //     }
+        // }
+    }
+
+    post {
+        always {
+            echo "🧹 Cleaning up temporary files..."
+            // script {
+            //     echo "📢 Publishing Jest E2E Report..."
+            //     publishHTML(target: [
+            //         reportDir: "${REPORT_DIR}",
+            //         reportFiles: '*.html',
+            //         reportName: "Jest E2E Reports",
+            //         alwaysLinkToLastBuild: true,
+            //         allowMissing: true,
+            //         keepAll: true,
+            //         escapeUnderscores: false
+            //     ])
+            // }
+        }
+
+        success {
+            echo "✅ E2E Tests completed successfully!"
+        }
+
+        unstable {
+            echo "⚠️ E2E Tests encountered issues but completed."
+        }
+
+        failure {
+            echo "❌ E2E Tests failed! Check logs."
+        }
+    }
+}
