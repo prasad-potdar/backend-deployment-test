@@ -5,6 +5,7 @@ pipeline {
         NODEJS_HOME = tool 'NodeJS'
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
         REPORT_DIR = "${WORKSPACE}/reports"
+        BATCH_SIZE = "3" // Set batch size as an environment variable
     }
 
     stages {
@@ -29,13 +30,12 @@ pipeline {
                         error "❌ No E2E test files found!"
                     }
 
-                    int batchSize = 3
+                    int batchSize = env.BATCH_SIZE.toInteger()
                     int numBatches = (testFiles.size() + batchSize - 1) / batchSize
 
                     echo "Total Test Files: ${testFiles.size()}, Batches: ${numBatches}, Batch Size: ${batchSize}"
                     
                     env.TEST_FILES_CSV = testFiles.join(',')
-                    env.BATCH_SIZE = batchSize.toString()
                     env.NUM_BATCHES = numBatches.toString()
                 }
             }
