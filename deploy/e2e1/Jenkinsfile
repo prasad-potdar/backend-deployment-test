@@ -122,16 +122,41 @@ pipeline {
         //     }
         // }
 
+        // always {
+        //     script {
+        //         sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
+
+        //         // Archive artifacts for safekeeping
+        //         archiveArtifacts artifacts: 'reports/**', fingerprint: true
+
+        //         // Dynamically generate publishHTML for each batch
+        //         def numBatches = env.BATCH_SIZE.toInteger()
+        //         for (int i = 1; i <= numBatches; i++) {
+        //             publishHTML([
+        //                 reportName: "E2E Test Report - Batch ${i}",
+        //                 reportDir: "reports/batch-${i}",
+        //                 reportFiles: 'jest_report.html',
+        //                 alwaysLinkToLastBuild: true,
+        //                 keepAll: true
+        //             ])
+        //         }
+        //     }
+        // }
+
         always {
             script {
                 sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
 
-                // Archive artifacts for safekeeping
+                // Archive artifacts
                 archiveArtifacts artifacts: 'reports/**', fingerprint: true
 
-                // Dynamically generate publishHTML for each batch
+                // Jenkins Base URL
+                def jenkinsBaseUrl = env.BUILD_URL // Gets the current build URL
+
+                // Generate report URLs dynamically
                 def numBatches = env.BATCH_SIZE.toInteger()
                 for (int i = 1; i <= numBatches; i++) {
+                    def reportPath = "reports/batch-${i}/jest_report.html"
                     publishHTML([
                         reportName: "E2E Test Report - Batch ${i}",
                         reportDir: "reports/batch-${i}",
@@ -139,9 +164,13 @@ pipeline {
                         alwaysLinkToLastBuild: true,
                         keepAll: true
                     ])
+
+                    // Print report URL in console
+                    echo "🔗 Report for Batch ${i}: ${jenkinsBaseUrl}artifact/${reportPath}"
                 }
             }
         }
+
         success {
             echo "✅ E2E Tests completed successfully!"
         }
