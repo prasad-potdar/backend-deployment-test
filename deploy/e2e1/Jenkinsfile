@@ -112,11 +112,11 @@ pipeline {
                 echo "📢 Reports Available at:"
                 
                
-                 archiveArtifacts artifacts: 'reports/**/*.html', fingerprint: true
-
-                def baseUrl = "${JENKINS_URL ?: env.BUILD_URL}"
+                def baseUrl = "${env.BUILD_URL ?: JENKINS_URL}"
+                echo "📢 Reports Available at:"
                 for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
-                    echo "🔗 Batch-${i} Report: ${baseUrl}artifact/reports/batch-${i}/jest_report.html"
+                    def reportUrl = "${baseUrl}artifact/reports/batch-${i}/jest_report.html"
+                    echo "🔗 Batch-${i} Report: ${reportUrl}"
                 }
 
             }
