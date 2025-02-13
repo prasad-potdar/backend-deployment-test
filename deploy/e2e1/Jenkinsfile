@@ -128,13 +128,15 @@ pipeline {
 
                     if (fileExists(batchJsonReport)) {
                         echo "📂 Processing report: ${batchJsonReport}"
+                        def jsonContent = readJSON text: readFile(batchJsonReport)
 
-                        def jsonContent = readJSON file: batchJsonReport
+                        echo "JSON Content***: ${jsonContent}"
+                        // def jsonContent = readJSON file: batchJsonReport
 
-                        totalPassed += jsonContent.numPassedTests
-                        totalFailed += jsonContent.numFailedTests
-                        totalPending += jsonContent.numPendingTests
-                        totalSuites += jsonContent.numTotalTestSuites
+                        // totalPassed += jsonContent.numPassedTests
+                        // totalFailed += jsonContent.numFailedTests
+                        // totalPending += jsonContent.numPendingTests
+                        // totalSuites += jsonContent.numTotalTestSuites
                     } else {
                         echo "⚠️ Warning: Report file not found for Batch ${i}"
                     }
