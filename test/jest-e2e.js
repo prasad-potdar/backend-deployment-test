@@ -16,7 +16,7 @@ module.exports = {
     [
       "jest-html-reporters",
       {
-        "publicPath": process.env.JEST_REPORT_DIR || "jest_reports",
+        "publicPath": process.env.JEST_REPORT_DIR || "reports",
         "filename": "jest_report.html",
         "expand": true
       },
