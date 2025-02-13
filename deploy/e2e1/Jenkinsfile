@@ -94,34 +94,54 @@ pipeline {
     }
 
     post {
-        always {
-            script {
-                int totalPassed = 0
-                int totalFailed = 0
+        // always {
+        //     script {
+        //         int totalPassed = 0
+        //         int totalFailed = 0
 
-                for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
-                    // Use dot notation instead of env["VAR_NAME"]
-                    totalPassed += (env."PASSED_${i}" ?: "0").toInteger()
-                    totalFailed += (env."FAILED_${i}" ?: "0").toInteger()
-                }
-
-                
-                echo "✅ Total Passed: ${totalPassed}, ❌ Total Failed: ${totalFailed}"
+        //         for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
+        //             // Use dot notation instead of env["VAR_NAME"]
+        //             totalPassed += (env."PASSED_${i}" ?: "0").toInteger()
+        //             totalFailed += (env."FAILED_${i}" ?: "0").toInteger()
+        //         }
 
                 
-                echo "📢 Reports Available at:"
+        //         echo "✅ Total Passed: ${totalPassed}, ❌ Total Failed: ${totalFailed}"
+
+                
+        //         echo "📢 Reports Available at:"
                 
                
-                def baseUrl = "${env.BUILD_URL ?: JENKINS_URL}"
-                echo "📢 Reports Available at:"
-                for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
-                    def reportUrl = "${baseUrl}artifact/reports/batch-${i}/jest_report.html"
-                    echo "🔗 Batch-${i} Report: ${reportUrl}"
-                }
+        //         def baseUrl = "${env.BUILD_URL ?: JENKINS_URL}"
+        //         echo "📢 Reports Available at:"
+        //         for (int i = 1; i <= env.BATCH_SIZE.toInteger(); i++) {
+        //             def reportUrl = "${baseUrl}artifact/reports/batch-${i}/jest_report.html"
+        //             echo "🔗 Batch-${i} Report: ${reportUrl}"
+        //         }
 
+        //     }
+        // }
+
+        always {
+            script {
+                sh "ls -lhR ${REPORT_DIR} || echo '❌ No reports found!'" // Debugging step
+
+                // Archive artifacts for safekeeping
+                archiveArtifacts artifacts: 'reports/**', fingerprint: true
+
+                // Dynamically generate publishHTML for each batch
+                def numBatches = env.BATCH_SIZE.toInteger()
+                for (int i = 1; i <= numBatches; i++) {
+                    publishHTML([
+                        reportName: "E2E Test Report - Batch ${i}",
+                        reportDir: "reports/batch-${i}",
+                        reportFiles: 'jest_report.html',
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true
+                    ])
+                }
             }
         }
-
         success {
             echo "✅ E2E Tests completed successfully!"
         }
